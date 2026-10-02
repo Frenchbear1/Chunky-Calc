@@ -2,6 +2,21 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Chunky Calc</title>
+<meta name="description" content="A tactile, customizable calculator with scientific functions, calculation history, sound, and haptics.">
+<meta name="theme-color" content="#efe6d4">
+<meta name="application-name" content="Chunky Calc">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Chunky Calc">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="msapplication-TileColor" content="#efe6d4">
+<meta name="msapplication-config" content="./browserconfig.xml">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="./assets/icons/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="./assets/icons/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
+<link rel="mask-icon" href="./assets/icons/safari-pinned-tab.svg" color="#ff7a3d">
 <style>
 :root{box-sizing:border-box;--bg:#efe6d4;--panel:#e2d7c0;--screen:#1c1b19;--ink:#f4ecd8;--dim:#8d8672;--key:#faf4e6;--keyd:#cfc3a8;--keytx:#2a2822;--op:#ff7a3d;--opd:#c4501c;--optx:#fff;--fn:#d9ccb0;--fnd:#b3a583}
 :root[data-skin="night"]{--bg:#0e1020;--panel:#171a33;--screen:#080915;--ink:#e9ecff;--dim:#6b719e;--key:#2a2f5c;--keyd:#14183a;--keytx:#e9ecff;--op:#7c5cff;--opd:#4630b8;--fn:#3a4080;--fnd:#1d2150}
@@ -193,4 +208,7 @@ addEventListener('keydown',e=>{const m={'*':'×','/':'÷','-':'−','Enter':'=',
  if(/^[\d.+%=^()!]$/.test(k)||'×÷−⌫'.includes(k)||k==='AC'){e.preventDefault();const b=document.querySelector('[data-k="'+k+'"]');if(b){b.classList.add('pressed');setTimeout(()=>b.classList.remove('pressed'),90)}blip(k);press(k)}});
 addEventListener('resize',()=>render());
 render();
+if('serviceWorker' in navigator){
+ addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+}
 </script></body></html>
