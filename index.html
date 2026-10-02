@@ -17,7 +17,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="./assets/icons/favicon-16x16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
 <link rel="mask-icon" href="./assets/icons/safari-pinned-tab.svg" color="#ff7a3d">
-<script src="./themes.js?v=13"></script>
+<script src="./themes.js?v=14"></script>
 <script src="./vendor/decimal.js"></script>
 <script src="./math.js?v=13"></script>
 <script>
@@ -51,17 +51,22 @@ html.standalone .app{--top-gap:44px;padding-bottom:12px;background:var(--bg)}
 @media(display-mode:standalone){html,body,.app{height:100vh}.app{--top-gap:44px;padding-bottom:12px}}
 .left{flex:1;display:flex;flex-direction:column;gap:12px;min-height:0}
 .screen{position:relative;flex:1;min-height:0;background:var(--screen);border-radius:32px;overflow:hidden;padding:12px 18px 16px;color:var(--ink);display:flex;flex-direction:column;box-shadow:0 4px 0 var(--keyd)}
-.fl{position:absolute;top:12px;display:flex;gap:10px;z-index:2}.fl.l{left:16px}.fl.r{right:16px}
-.ib{width:42px;height:42px;border-radius:50%;border:0;background:var(--ib,rgba(255,255,255,.14));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--ink);font-size:19px;box-shadow:0 6px 14px #0006,inset 0 1px 0 #fff3;cursor:pointer;transition:transform .08s}
+.ib{width:52px;height:100%;border-radius:18px;border:0;background:var(--ib);color:var(--ibtx);display:grid;place-items:center;padding:0;box-shadow:0 5px 0 var(--fnd),0 6px 14px #0003;cursor:pointer;transition:transform .08s}
+.ib svg{width:32px;height:32px;pointer-events:none}
 .ib:active{transform:scale(.88)}
-.tape{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:20px 0 0 42px;font-size:18px;color:var(--dim);text-align:right;scrollbar-width:none;min-height:0;overscroll-behavior:contain;-webkit-mask-image:linear-gradient(to bottom,transparent,#000 20px);mask-image:linear-gradient(to bottom,transparent,#000 20px)}
+.tape{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:20px 0 0;font-size:18px;color:var(--dim);text-align:right;scrollbar-width:none;min-height:0;overscroll-behavior:contain;-webkit-mask-image:linear-gradient(to bottom,transparent,#000 20px);mask-image:linear-gradient(to bottom,transparent,#000 20px)}
 .tape div{flex-shrink:0;cursor:pointer;padding:2px 0;overflow-wrap:anywhere}.tape div:first-child{margin-top:auto}.tape b{color:var(--ink);font-weight:600}
 .expr{font-size:28px;color:var(--dim);text-align:right;min-height:30px;overflow-x:auto;white-space:nowrap;scrollbar-width:none;direction:rtl}
 .expr span{direction:ltr;unicode-bidi:plaintext}
 .main{font-size:76px;font-weight:800;text-align:right;white-space:nowrap;overflow:hidden;line-height:1.1;transition:transform .12s}
 .main.pop{transform:scale(1.05)}
 .pad{flex:0 0 auto;display:flex;flex-direction:column;gap:12px;padding:14px;background:var(--panel);border-radius:30px;min-height:0}
-.fx{flex:none;height:clamp(46px,7vh,58px);font-size:clamp(16px,2.6vh,20px)!important;border-radius:18px;touch-action:none;-webkit-touch-callout:none;--d:5px}
+.fx-wrap{position:relative;flex:none;height:clamp(46px,7vh,58px)}
+.fx{width:100%;height:100%;font-size:clamp(16px,2.6vh,20px)!important;border-radius:18px;touch-action:none;-webkit-touch-callout:none;--d:5px;z-index:1}
+.fx-wrap .ib{position:absolute;left:0;top:0;visibility:hidden;pointer-events:none}
+.pad.adv .fx{width:calc(100% - 64px);margin-left:64px}
+.pad.adv .fx-wrap .ib{visibility:visible;pointer-events:auto}
+.fx-wrap .ib.hot{outline:3px solid var(--op);outline-offset:2px;transform:scale(1.04)}
 .keys{flex:0 0 auto;min-height:0;position:relative}
 .basic,.advg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(5,1fr);gap:12px}
 .basic .k{aspect-ratio:1;min-width:0;padding:0}
@@ -96,9 +101,9 @@ html.standalone .app{--top-gap:44px;padding-bottom:12px;background:var(--bg)}
 .row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:6px 0;font-weight:600;font-size:16px}
 .chip{border:0;border-radius:99px;padding:9px 15px;font-weight:700;font-size:14px;font-family:inherit;background:var(--panel);color:var(--keytx);cursor:pointer}
 .chip.on{background:var(--op);color:var(--optx)}
-.chips{display:flex;flex-wrap:wrap;gap:8px}.sws{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.theme-option{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:12px}
-.sw{width:46px;height:46px;border-radius:50%;border:3px solid transparent;box-shadow:0 0 0 1px #0002;cursor:pointer}
+.chips{display:flex;flex-wrap:wrap;gap:8px}.sws{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;padding:3px}
+.theme-option{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px;min-width:0}
+.sw{width:min(46px,100%);aspect-ratio:1;border-radius:50%;border:3px solid transparent;box-shadow:0 0 0 1px #0002;cursor:pointer;padding:0}
 .sw.on{border-color:var(--bg);box-shadow:0 0 0 3px var(--op)}
 input[type=range]{accent-color:var(--op);width:55%}
 #sbody{overflow-y:auto;min-height:0}#setsheet .panel{max-height:88%}
@@ -110,12 +115,12 @@ input[type=range]{accent-color:var(--op);width:55%}
 .custom-editor p{font-size:12px;line-height:1.4;margin:0;color:#585864}
 .mini-calc{position:sticky;top:0;z-index:2;width:156px;margin:0 auto;padding:7px;background:var(--bg);border:5px solid #e9e9ee;border-radius:16px;pointer-events:none}
 .mini-screen{background:var(--screen);border-radius:12px;padding:8px;margin-bottom:6px;box-shadow:0 2px var(--keyd);text-align:right}
-.mini-gear{float:left;border-radius:50%;background:var(--ib);color:var(--ibtx);padding:2px 4px;font-size:10px}
+.mini-gear{display:grid;place-items:center;border-radius:6px;background:var(--ib);color:var(--ibtx);font-size:17px;box-shadow:0 2px var(--fnd)}
 .mini-history{color:var(--dim);font-size:10px;margin-top:12px}.mini-answer{color:var(--ink);font-size:27px;font-weight:800}
 .mini-pad{background:var(--panel);padding:6px;border-radius:12px;display:grid;gap:5px;grid-template-columns:repeat(4,1fr)}
 .mini-key{display:grid;place-items:center;aspect-ratio:1;border-radius:6px;font-size:12px;font-weight:700;background:var(--key);color:var(--keytx);box-shadow:0 2px var(--keyd)}
 .mini-key.fn{background:var(--fn);color:var(--fntx);box-shadow:0 2px var(--fnd)}.mini-key.op{background:var(--op);color:var(--optx);box-shadow:0 2px var(--opd)}
-.mini-key.fx-sample{grid-column:span 4;aspect-ratio:auto;height:22px;font-size:10px}
+.mini-key.fx-sample{grid-column:span 3;aspect-ratio:auto;height:22px;font-size:10px}
 .color-controls{display:grid;gap:10px}.color-controls label{font-size:13px;font-weight:650;display:grid;gap:5px}
 .color-controls select,.hex-input{font:inherit;font-size:16px;border:1px solid #c5c5cf;background:#fff;color:#242429;padding:10px;border-radius:10px;min-width:0;width:100%}
 .color-entry{display:grid;grid-template-columns:52px 1fr;gap:8px;align-items:end}.color-entry input[type=color]{width:52px;height:42px;padding:3px;border:1px solid #c5c5cf;border-radius:10px;background:white;cursor:pointer}
@@ -132,11 +137,10 @@ input[type=range]{accent-color:var(--op);width:55%}
 <div class="app">
  <div class="left">
   <div class="screen">
-   <div class="fl l"><button class="ib" id="gear" title="Settings" aria-label="Settings">⚙︎</button></div>
    <div class="tape" id="tape"></div><div class="expr"><span id="expr"></span></div><div class="main" id="main">0</div>
   </div>
  </div>
- <div class="pad" id="pad"><button class="k fn fx" id="fx">ƒ(x)  hold &amp; slide</button><div class="keys"><div class="basic" id="basic"></div><div class="advg" id="advg"></div></div></div>
+ <div class="pad" id="pad"><div class="fx-wrap"><button class="ib" id="gear" title="Settings" aria-label="Settings" tabindex="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.02,4.79 L9.92,2.22 L14.08,2.22 L14.98,4.79 L14.98,4.79 L17.45,3.61 L20.39,6.55 L19.21,9.02 L19.21,9.02 L21.78,9.92 L21.78,14.08 L19.21,14.98 L19.21,14.98 L20.39,17.45 L17.45,20.39 L14.98,19.21 L14.98,19.21 L14.08,21.78 L9.92,21.78 L9.02,19.21 L9.02,19.21 L6.55,20.39 L3.61,17.45 L4.79,14.98 L4.79,14.98 L2.22,14.08 L2.22,9.92 L4.79,9.02 L4.79,9.02 L3.61,6.55 L6.55,3.61 L9.02,4.79Z"/><circle cx="12" cy="12" r="3.5"/></svg></button><button class="k fn fx" id="fx" aria-label="Hold and slide to a function, or left to Settings. Press Enter for Settings." title="Hold and slide left for Settings">ƒ(x)  hold &amp; slide</button></div><div class="keys"><div class="basic" id="basic"></div><div class="advg" id="advg"></div></div></div>
 </div>
 <div class="sheet" id="sheet"><div class="panel"><div class="ph"><b>History · last 3 days</b><button class="pill" id="hclr">Clear</button><button class="pill" id="hx">✕</button></div><div id="hlist"></div></div></div>
 <div class="sheet" id="setsheet"><div class="panel"><div class="ph"><b>Settings</b><button class="pill" id="sx">✕</button></div><div id="sbody"></div></div></div>
@@ -297,21 +301,28 @@ function buildSet(){sb.innerHTML='';
  rw('Keys sound different',tg('dynamic'));
  sec('Sound pack');const c=mkEl('div','chips');Object.entries(PK).forEach(([id,p])=>c.appendChild(chip(p.n,S.pack===id,()=>{S.pack=id;persist();buildSet();blip('3');setTimeout(()=>blip('7'),110);setTimeout(()=>blip('='),230)})));sb.appendChild(c);
  sec('History');rw('Past calculations',chip('View last 3 days',false,()=>{$('setsheet').classList.remove('on');showHist()}))}
-$('gear').onclick=()=>{buildSet();$('setsheet').classList.add('on')};
-const closeSettings=()=>$('setsheet').classList.remove('on');
+const openSettings=()=>{buildSet();$('setsheet').classList.add('on');$('sx').focus()};
+$('gear').onclick=openSettings;
+const closeSettings=()=>{$('setsheet').classList.remove('on');$('fx').focus()};
 $('sx').onclick=closeSettings;
 $('setsheet').onclick=e=>{if(e.target.id==='setsheet')closeSettings()};
-const fx=$('fx'),FXL='ƒ(x)  hold & slide';let hot=null,holding=false;
-const setHot=b=>{if(b===hot)return;hot&&hot.classList.remove('hot');hot=b;if(b){b.classList.add('hot');blip(b.dataset.k,[...advg.children].indexOf(b))}};
-fx.addEventListener('pointerdown',e=>{e.preventDefault();holding=true;try{fx.setPointerCapture(e.pointerId)}catch(_){}pad.classList.add('adv');fx.classList.add('pressed');fx.textContent='Slide to a key, release';blip('morph')});
-fx.addEventListener('pointermove',e=>{if(!holding)return;const el=document.elementFromPoint(e.clientX,e.clientY);setHot(el&&el.closest?el.closest('.advg .k'):null)});
-const endHold=go=>{if(!holding)return;holding=false;const k=go&&hot?hot.dataset.k:null;setHot(null);pad.classList.remove('adv');fx.classList.remove('pressed');fx.textContent=FXL;if(k){blip(k,'pick');press(k)}};
-fx.addEventListener('pointerup',()=>endHold(true));fx.addEventListener('pointercancel',()=>endHold(false));
+const fx=$('fx'),FXL='ƒ(x)  hold & slide';let hot=null,holding=false,holdPointer=null;
+const setHot=b=>{if(b===hot)return;hot&&hot.classList.remove('hot');hot=b;if(b){b.classList.add('hot');blip(b.id==='gear'?'morph':b.dataset.k,[...advg.children].indexOf(b))}};
+const holdTarget=e=>{const el=document.elementFromPoint(e.clientX,e.clientY);return el&&el.closest?el.closest('#gear,.advg .k'):null};
+fx.addEventListener('pointerdown',e=>{if(e.button!==0||!e.isPrimary||holding)return;e.preventDefault();holding=true;holdPointer=e.pointerId;try{fx.setPointerCapture(e.pointerId)}catch(_){}pad.classList.add('adv');fx.classList.add('pressed');fx.textContent='← Settings · slide to a key';blip('morph')});
+fx.addEventListener('pointermove',e=>{if(holding&&e.pointerId===holdPointer)setHot(holdTarget(e))});
+const endHold=(go,e)=>{if(!holding||e&&e.pointerId!==holdPointer)return;const target=go&&hot&&holdTarget(e);holding=false;holdPointer=null;setHot(null);pad.classList.remove('adv');fx.classList.remove('pressed');fx.textContent=FXL;if(target){if(target.id==='gear'){blip('morph');openSettings()}else{blip(target.dataset.k,'pick');press(target.dataset.k)}}};
+fx.addEventListener('pointerup',e=>endHold(true,e));
+['pointercancel','lostpointercapture'].forEach(type=>fx.addEventListener(type,e=>endHold(false,e)));
+addEventListener('blur',()=>endHold(false));
+document.addEventListener('visibilitychange',()=>{if(document.hidden)endHold(false)});
+fx.addEventListener('click',e=>{if(e.detail===0)openSettings()});
+fx.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'){e.preventDefault();e.stopPropagation();openSettings()}});
 fx.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('selectstart',e=>{if(!e.target.closest('input,textarea'))e.preventDefault()});
 document.addEventListener('contextmenu',e=>{if(!e.target.closest('input,textarea'))e.preventDefault()});
 document.addEventListener('touchmove',e=>{if(holding)e.preventDefault()},{passive:false});
-addEventListener('keydown',e=>{if(e.target.closest('input,select,textarea,[contenteditable=true]'))return;const m={'*':'×','/':'÷','-':'−','Enter':'=','Backspace':'⌫','Escape':'AC'};const k=m[e.key]||e.key;
+addEventListener('keydown',e=>{if(e.target.closest('input,select,textarea,[contenteditable=true]')||e.target.closest('button')&&['Enter',' '].includes(e.key))return;const m={'*':'×','/':'÷','-':'−','Enter':'=','Backspace':'⌫','Escape':'AC'};const k=m[e.key]||e.key;
  if(/^[\d.+%=^()!]$/.test(k)||'×÷−⌫'.includes(k)||k==='AC'){e.preventDefault();const b=document.querySelector('[data-k="'+k+'"]');if(b){b.classList.add('pressed');setTimeout(()=>b.classList.remove('pressed'),90)}blip(k);press(k)}});
 addEventListener('resize',()=>render());
 render();

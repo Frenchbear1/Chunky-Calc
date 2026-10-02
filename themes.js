@@ -10,17 +10,18 @@ const CalcThemes=(()=>{
  }
  const palette=p=>Object.fromEntries(fields.map(([k])=>[k,color(p&&p[k])||defaults[k]]));
  function restore(s){
+  delete s.themeColors;
   s.customThemes=(Array.isArray(s.customThemes)?s.customThemes:[]).filter(t=>t&&typeof t.id==='string'&&typeof t.name==='string').map(t=>({id:t.id,name:t.name.slice(0,40),colors:palette(t.colors)}));
   if(!s.customThemes.length&&s.custom){const t={id:'legacy-custom',name:'My theme',colors:palette(s.custom)};s.customThemes.push(t);if(s.skin==='custom')s.customThemeId=t.id}
   const active=s.customThemes.find(t=>t.id===s.customThemeId);
   if(s.skin==='custom'&&active)s.custom={...active.colors};
   return s;
  }
- function savedSettings(s,id,name,colors,recent){
+ function savedSettings(s,id,name,colors){
   name=name.trim();if(!name)throw Error('Give your theme a name.');
   if(s.customThemes.some(t=>t.id!==id&&t.name.toLowerCase()===name.toLowerCase()))throw Error('That name is already used. Choose another name.');
   const t={id:id||('theme-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8)),name:name.slice(0,40),colors:palette(colors)};
-  return {...s,skin:'custom',customThemeId:t.id,custom:{...t.colors},customThemes:[...s.customThemes.filter(x=>x.id!==t.id),t],themeColors:recent||[]};
+  return {...s,skin:'custom',customThemeId:t.id,custom:{...t.colors},customThemes:[...s.customThemes.filter(x=>x.id!==t.id),t]};
  }
  function apply(s){
   const root=document.documentElement;root.dataset.skin=s.skin;
@@ -43,8 +44,8 @@ const CalcThemes=(()=>{
   const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text)e.textContent=text;return e};
   const box=el('section','custom-editor');box.setAttribute('aria-label','Custom theme editor');
   const preview=el('div','mini-calc');preview.setAttribute('role','img');preview.setAttribute('aria-label','Live calculator color preview');
-  const display=el('div','mini-screen');display.append(el('span','mini-gear','⚙︎'),el('div','mini-history','24 × 5 = 120'),el('div','mini-answer','120'));
-  const pad=el('div','mini-pad');pad.append(el('span','mini-key fn fx-sample','ƒ(x)  hold & slide'));
+  const display=el('div','mini-screen');display.append(el('div','mini-history','24 × 5 = 120'),el('div','mini-answer','120'));
+  const pad=el('div','mini-pad');pad.append(el('span','mini-gear','⚙︎'),el('span','mini-key fn fx-sample','ƒ(x)  hold & slide'));
   ['AC','⌫','%','÷','7','8','9','×','4','5','6','−','1','2','3','+','±','0','.','='].forEach((k,i)=>pad.append(el('span','mini-key'+(i%4===3?' op':i<3||i===16?' fn':''),k)));
   preview.append(display,pad);box.append(preview,el('p','','Pick a soft palette, then adjust any part. Save when you’re happy with it.'));
   const presetsRow=el('div','custom-presets');
@@ -53,22 +54,19 @@ const CalcThemes=(()=>{
   fields.forEach(([key,name])=>{const o=el('option','',name);o.value=key;part.append(o)});
   const label=(name,input)=>{const l=el('label','',name);l.append(input);return l};
   controls.append(label('Choose a part',part));
-  const reuse=el('div','reuse-colors');reuse.setAttribute('aria-label','Reusable colors');controls.append(el('p','','Reuse a color'),reuse);
-  s.recentColors=(s.recentColors||[]).map(color).filter(Boolean);let previousPart=part.value;
-  function remember(v){s.recentColors=[v,...s.recentColors.filter(x=>x!==v)].slice(0,24)}
-  function swatches(){reuse.replaceChildren();const colors=[...new Set([...Object.values(palette(s.custom)),...s.recentColors])];colors.forEach(v=>{const b=el('button','color-swatch');b.type='button';b.style.background=v;b.title=v;b.setAttribute('aria-label','Use '+v);b.onclick=()=>{remember(v);update(v)};reuse.append(b)})}
+  const reuse=el('div','reuse-colors');reuse.setAttribute('aria-label','Reusable element colors');controls.append(el('p','','Reuse a color · one per element'),reuse);
+  const swatches=fields.map(([key,name])=>{const b=el('button','color-swatch');b.type='button';b.dataset.element=key;b.onclick=()=>update(palette(s.custom)[key]);reuse.append(b);return {key,name,b}});
   const row=el('div','color-entry'),picker=el('input'),hex=el('input','hex-input');picker.type='color';picker.setAttribute('aria-label','Color picker');hex.type='text';hex.maxLength=7;hex.spellcheck=false;hex.autocomplete='off';hex.setAttribute('aria-label','Hex color');
   row.append(picker,label('Hex color',hex));controls.append(row);
   const ranges=['Hue','Saturation','Lightness'].map((name,i)=>{const input=el('input');input.type='range';input.min=0;input.max=i?100:360;input.step=1;input.setAttribute('aria-label',name);const l=label(name,input);controls.append(l);return input});
   const hint=el('p','','Lower saturation for muted tones. Raise lightness for pastels.');hint.setAttribute('aria-live','polite');controls.append(hint);box.append(controls);host.append(box);
-  function commit(){s.custom=palette(s.custom);onChange();fields.forEach(([k])=>preview.style.setProperty('--'+k,s.custom[k]));swatches()}
+  function commit(){s.custom=palette(s.custom);onChange();fields.forEach(([k])=>preview.style.setProperty('--'+k,s.custom[k]));swatches.forEach(({key,name,b})=>{const v=s.custom[key];b.style.background=v;b.title=name+': '+v;b.setAttribute('aria-label','Use '+name+' color '+v)})}
   function sync(){const v=palette(s.custom)[part.value];picker.value=v;hex.value=v;hex.removeAttribute('aria-invalid');toHsl(v).forEach((n,i)=>ranges[i].value=n);ranges[0].style.background='linear-gradient(to right,red,yellow,lime,cyan,blue,magenta,red)'}
   function update(v,sliders=false,preserveHex=false){s.custom={...palette(s.custom),[part.value]:v};commit();picker.value=v;if(!preserveHex)hex.value=v;hex.removeAttribute('aria-invalid');if(!sliders)toHsl(v).forEach((n,i)=>ranges[i].value=n)}
-  part.onchange=()=>{remember(palette(s.custom)[previousPart]);previousPart=part.value;swatches();sync()};picker.oninput=()=>update(picker.value);picker.onchange=()=>{remember(picker.value);swatches()};
+  part.onchange=sync;picker.oninput=()=>update(picker.value);
   hex.oninput=()=>{const v=color(hex.value);if(v){update(v,false,true);hint.textContent='Preview updated.'}else{hex.setAttribute('aria-invalid','true');hint.textContent='Enter a hex color, such as #D8C5E8.'}};
-  hex.onchange=()=>{const v=color(hex.value);if(v){hex.value=v;remember(v);swatches()}};
+  hex.onchange=()=>{const v=color(hex.value);if(v)hex.value=v};
   ranges.forEach(r=>r.oninput=()=>update(fromHsl(...ranges.map(x=>+x.value)),true));
-  ranges.forEach(r=>r.onchange=()=>{remember(palette(s.custom)[part.value]);swatches()});
   commit();sync();
  }
  function manager(host,s,onChange){
@@ -82,14 +80,14 @@ const CalcThemes=(()=>{
   select.onchange=()=>{if(select.value==='__new'){open();select.value=s.skin==='custom'?s.customThemeId||'':'';return}const t=s.customThemes.find(x=>x.id===select.value);if(t){s.skin='custom';s.customThemeId=t.id;s.custom={...t.colors};onChange()}};
   host.append(wrap);
   function open(existing){
-   const focused=document.activeElement,draft={custom:palette(existing?existing.colors:snapshot()),recentColors:[...(s.themeColors||[])]};
+   const focused=document.activeElement,draft={custom:palette(existing?existing.colors:snapshot())};
    const modal=el('div');modal.className='sheet on theme-popup';modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-label',existing?'Edit theme':'Create theme');
    const panel=el('form');panel.className='panel';const header=el('div');header.className='ph';
    const cancel=el('button','Cancel'),save=el('button','Save');cancel.type='button';save.type='submit';cancel.className=save.className='pill';header.append(cancel,el('b',existing?'Edit theme':'Create theme'),save);
    const body=el('div');body.className='theme-body';const nameLabel=el('label','Theme name'),name=el('input');name.type='text';name.maxLength=40;name.autocomplete='off';name.value=existing?existing.name:'';name.placeholder='e.g. Soft sage';name.className='hex-input';name.setAttribute('aria-label','Theme name');nameLabel.append(name);body.append(nameLabel);
    const error=el('p');error.className='theme-error';error.setAttribute('role','alert');body.append(error);editor(body,draft,()=>{});panel.append(header,body);modal.append(panel);document.body.append(modal);
    const close=()=>{modal.remove();if(focused&&focused.isConnected)focused.focus()};cancel.onclick=close;
-   panel.onsubmit=e=>{e.preventDefault();try{const next=savedSettings(s,existing&&existing.id,name.value,draft.custom,draft.recentColors);localStorage.setItem('cc_set',JSON.stringify(next));Object.assign(s,next);close();onChange()}catch(err){error.textContent=err.message||'Could not save this theme on your device.';name.focus()}};
+   panel.onsubmit=e=>{e.preventDefault();try{const next=savedSettings(s,existing&&existing.id,name.value,draft.custom);localStorage.setItem('cc_set',JSON.stringify(next));Object.assign(s,next);close();onChange()}catch(err){error.textContent=err.message||'Could not save this theme on your device.';name.focus()}};
    modal.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape'){e.preventDefault();close()}if(e.key==='Tab'){const items=[...panel.querySelectorAll('button,input,select')],first=items[0],last=items.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
    cancel.focus();
   }

@@ -31,3 +31,18 @@ test('named theme saves are independent and edits preserve the selected id',()=>
  const reopened=T.restore(JSON.parse(JSON.stringify(edited)));assert.equal(reopened.custom.bg,'#345678');assert.equal(reopened.skin,'custom');
  assert.throws(()=>T.savedSettings(reopened,null,'  ',{},[]));assert.throws(()=>T.savedSettings(reopened,null,'blush',{},[]));
 });
+test('each element keeps one live reusable swatch, including matching colors',()=>{
+ const nodes=[];
+ c.document.createElement=tag=>{
+  const n={tag,children:[],dataset:{},attributes:{},style:{setProperty(){}},value:'',setAttribute(k,v){this.attributes[k]=v},removeAttribute(k){delete this.attributes[k]},append(...items){this.children.push(...items);if(tag==='select'&&!this.value)this.value=items[0].value}};
+  nodes.push(n);return n;
+ };
+ const draft={custom:T.palette({bg:'#112233',panel:'#112233'}),recentColors:['#ff0000']};T.editor({append(){}},draft,()=>{});
+ const swatches=nodes.filter(n=>n.className==='color-swatch'),picker=nodes.find(n=>n.attributes['aria-label']==='Color picker'),part=nodes.find(n=>n.attributes['aria-label']==='Calculator element');
+ assert.equal(swatches.length,16);assert.equal(new Set(swatches.map(n=>n.dataset.element)).size,16);
+ const bg=swatches.find(n=>n.dataset.element==='bg'),panel=swatches.find(n=>n.dataset.element==='panel');
+ for(const v of ['#223344','#334455','#445566']){picker.value=v;picker.oninput();assert.equal(bg.style.background,v);assert.equal(panel.style.background,'#112233')}
+ assert.equal(nodes.filter(n=>n.className==='color-swatch').length,16);
+ part.value='op';part.onchange();bg.onclick();assert.equal(draft.custom.op,'#445566');assert.equal(picker.value,'#445566');assert.equal(swatches.find(n=>n.dataset.element==='op').style.background,'#445566');
+ const lightness=nodes.find(n=>n.attributes['aria-label']==='Lightness');lightness.value=80;lightness.oninput();assert.equal(swatches.find(n=>n.dataset.element==='op').style.background,draft.custom.op);assert.equal(bg.style.background,'#445566');
+});
