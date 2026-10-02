@@ -139,9 +139,12 @@ function bindHistoryHold(b){
 }
 function mk(host,k,c){const b=document.createElement('button');b.className='k '+(c||'');b.textContent=k;b.dataset.k=k;
  const consumeHold=k==='AC'?bindHistoryHold(b):null;
- b.addEventListener('pointerdown',()=>{b.classList.add('pressed')});
+ let hitBox=null,cancelled=false;
+ b.addEventListener('pointerdown',e=>{hitBox=b.getBoundingClientRect();cancelled=false;try{b.setPointerCapture(e.pointerId)}catch(_){}b.classList.add('pressed')});
+ b.addEventListener('pointerup',e=>{if(hitBox)cancelled=e.clientX<hitBox.left-2||e.clientX>hitBox.right+2||e.clientY<hitBox.top-2||e.clientY>hitBox.bottom+7;hitBox=null});
+ b.addEventListener('pointercancel',()=>{cancelled=true;hitBox=null});
  ['pointerup','pointerleave','pointercancel'].forEach(e=>b.addEventListener(e,()=>b.classList.remove('pressed')));
- b.addEventListener('click',e=>{if(consumeHold&&consumeHold()){e.preventDefault();return}blip(k);press(k)});host.appendChild(b)}
+ b.addEventListener('click',e=>{const skip=cancelled&&e.detail!==0;cancelled=false;if((consumeHold&&consumeHold())||skip){e.preventDefault();return}blip(k);press(k)});host.appendChild(b)}
 keys.forEach(([k,c])=>mk(basic,k,c));sk.forEach((k,i)=>{const b=document.createElement('button');b.className='k';b.textContent=k;b.dataset.k=k;b.style.setProperty('--i',i);advg.appendChild(b)});
 const S=Object.assign({skin:'cream',sound:true,silent:false,pack:'arcade',dynamic:true,vol:.7},(()=>{try{return JSON.parse(localStorage.getItem('cc_set'))||{}}catch(e){return{}}})());
 delete S.haptics;

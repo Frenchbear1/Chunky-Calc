@@ -37,9 +37,11 @@ test('failed audio resume does not reject the input handler',async()=>{
 });
 test('accepted clicks, including edge/accessibility clicks, always pair sound with input',()=>{
  const listeners={},events=[];
- const b={classList:{add(){},remove(){}},dataset:{},addEventListener(t,f){listeners[t]=f}};
+ const b={classList:{add(){},remove(){}},dataset:{},getBoundingClientRect:()=>({left:0,right:80,top:0,bottom:80}),setPointerCapture(){},addEventListener(t,f){(listeners[t]??=[]).push(f)}};
+ const fire=(type,e={})=>listeners[type].forEach(f=>f(e));
  const c=vm.createContext({document:{createElement:()=>b},blip:k=>events.push('sound:'+k),press:k=>events.push('input:'+k)});
  vm.runInContext(html.slice(html.indexOf('function mk('),html.indexOf('keys.forEach(')),c);
- c.mk({appendChild(){}},'7','');listeners.click({});assert.deepEqual(events,['sound:7','input:7']);
- events.length=0;listeners.pointerdown({});listeners.pointerup({});listeners.click({});assert.deepEqual(events,['sound:7','input:7']);
+ c.mk({appendChild(){}},'7','');fire('click');assert.deepEqual(events,['sound:7','input:7']);
+ events.length=0;fire('pointerdown',{pointerId:1});fire('pointerup',{clientX:40,clientY:84});fire('click');assert.deepEqual(events,['sound:7','input:7']);
+ events.length=0;fire('pointerdown',{pointerId:2});fire('pointerup',{clientX:100,clientY:100});fire('click',{detail:1,preventDefault(){}});assert.deepEqual(events,[]);
 });
