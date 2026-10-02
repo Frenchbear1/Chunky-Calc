@@ -17,7 +17,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="./assets/icons/favicon-16x16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
 <link rel="mask-icon" href="./assets/icons/safari-pinned-tab.svg" color="#ff7a3d">
-<script src="./themes.js?v=14"></script>
+<script src="./themes.js?v=15"></script>
 <script src="./vendor/decimal.js"></script>
 <script src="./math.js?v=13"></script>
 <script>
@@ -132,7 +132,8 @@ input[type=range]{accent-color:var(--op);width:55%}
 .theme-popup{z-index:20}.theme-popup .panel{height:calc(100dvh - env(safe-area-inset-top,0px) - 12px);max-height:none;background:#f5f5f7;color:#242429}
 .theme-popup .pill{background:#dddde5;color:#242429}.theme-popup button[type=submit]{background:#353540;color:white}
 .theme-body{overflow-y:auto;min-height:0;flex:1}.theme-body>label{display:grid;gap:6px;font-size:14px;font-weight:650}.theme-error{color:#a82020;font-size:13px;margin:8px 0}
-.reuse-colors{display:flex;flex-wrap:wrap;gap:8px}.color-swatch{width:30px;height:30px;flex:none;border-radius:50%;border:2px solid white;box-shadow:0 0 0 1px #999;cursor:pointer}
+.reuse-colors{display:flex;flex-wrap:wrap;gap:8px}.color-swatch{width:30px;height:30px;flex:none;border-radius:999px;border:2px solid white;box-shadow:0 0 0 1px #999;cursor:pointer}
+.color-swatch[aria-current=true]{width:54px;box-shadow:0 0 0 2px #6554ad}
 </style></head><body>
 <div class="app">
  <div class="left">
@@ -194,23 +195,40 @@ const syncChrome=()=>{const bg=getComputedStyle(document.documentElement).getPro
 syncChrome();
 requestAnimationFrame(()=>document.documentElement.classList.add('ready'));
 const hasAudioSession=!!navigator.audioSession;
-let audioSessionType;
+let audioSessionType,audioResume;
 const syncAudioSession=()=>{const type=S.silent?'playback':'auto';if(hasAudioSession&&type!==audioSessionType){try{navigator.audioSession.type=type;audioSessionType=type}catch(e){}}};
 syncAudioSession();
+function releaseAudio(){
+ const old=ac;ac=null;nb=null;audioResume=null;audioSessionType=undefined;
+ // Retire backgrounded contexts even when they still report "running".
+ // Build a fresh output connection inside the next foreground gesture.
+ if(old&&old.state!=='closed')try{void old.close().catch(()=>{})}catch(e){}
+}
+function resumeAudio(context){
+ if(audioResume&&audioResume.context===context)return audioResume.promise;
+ const task={context};audioResume=task;
+ task.promise=new Promise(resolve=>{
+  let done=false;const timer=setTimeout(()=>finish(false),500);
+  const finish=ok=>{if(done)return;done=true;clearTimeout(timer);if(audioResume===task)audioResume=null;if(!ok&&ac===context)releaseAudio();resolve(ok)};
+  try{Promise.resolve(context.resume()).then(()=>finish(context.state==='running'),()=>finish(false))}catch(e){finish(false)}
+ });
+ return task.promise;
+}
 async function readyAudio(){
  if(!S.sound||S.vol<=0||document.hidden)return null;
  try{
   syncAudioSession();
   if(!ac||ac.state==='closed'){ac=new(window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});nb=null}
   const context=ac;
-  if(context.state!=='running')await context.resume();
-  return context.state==='running'?context:null;
+  if(context.state!=='running'&&!await resumeAudio(context))return null;
+  return context===ac&&context.state==='running'&&!document.hidden?context:null;
  }catch(e){return null}
 }
 // Unlock on the first gesture, including touch release on iPhone. Never play on load.
 ['pointerdown','pointerup','touchend','keydown','click'].forEach(type=>document.addEventListener(type,()=>{void readyAudio()},{capture:true,passive:true}));
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&ac)void readyAudio()});
-addEventListener('pageshow',()=>{if(ac)void readyAudio()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseAudio();else audioSessionType=undefined});
+addEventListener('pagehide',releaseAudio);
+addEventListener('pageshow',()=>{audioSessionType=undefined});
 const PK={arcade:{n:'Arcade',w:'square',d:.09,g:.06,bend:.6,pitch:1,arp:1},soft:{n:'Soft',w:'sine',d:.28,g:.16,bend:1,pitch:1,arp:1,h:2},marimba:{n:'Marimba',w:'sine',d:.35,g:.2,bend:.98,pitch:1,arp:1,h:4},bubble:{n:'Bubble',w:'sine',d:.13,g:.18,bend:1.9,pitch:1.4,arp:1},clicky:{n:'Clicky',w:'square',d:.04,g:.035,bend:.5,pitch:.5,click:1,freq:3500},typewriter:{n:'Typewriter',w:'triangle',d:.06,g:.07,bend:.7,pitch:.7,click:1.4,freq:1800,bell:1}};
 const SC=[0,2,4,7,9,12,14,16,19,21],OPN={'+':19,'−':3,'×':14,'÷':10,'^':17};let nb;
 const kindOf=k=>/^\d$/.test(k)?'digit':k==='.'?'dot':'+−×÷^'.includes(k)?'op':({'=':'eq','AC':'clear','⌫':'back','morph':'morph','err':'err'})[k]||'fn';
@@ -309,7 +327,7 @@ $('setsheet').onclick=e=>{if(e.target.id==='setsheet')closeSettings()};
 const fx=$('fx'),FXL='ƒ(x)  hold & slide';let hot=null,holding=false,holdPointer=null;
 const setHot=b=>{if(b===hot)return;hot&&hot.classList.remove('hot');hot=b;if(b){b.classList.add('hot');blip(b.id==='gear'?'morph':b.dataset.k,[...advg.children].indexOf(b))}};
 const holdTarget=e=>{const el=document.elementFromPoint(e.clientX,e.clientY);return el&&el.closest?el.closest('#gear,.advg .k'):null};
-fx.addEventListener('pointerdown',e=>{if(e.button!==0||!e.isPrimary||holding)return;e.preventDefault();holding=true;holdPointer=e.pointerId;try{fx.setPointerCapture(e.pointerId)}catch(_){}pad.classList.add('adv');fx.classList.add('pressed');fx.textContent='← Settings · slide to a key';blip('morph')});
+fx.addEventListener('pointerdown',e=>{if(e.button!==0||!e.isPrimary||holding)return;e.preventDefault();holding=true;holdPointer=e.pointerId;try{fx.setPointerCapture(e.pointerId)}catch(_){}pad.classList.add('adv');fx.classList.add('pressed');fx.textContent='Slide to a key, release';blip('morph')});
 fx.addEventListener('pointermove',e=>{if(holding&&e.pointerId===holdPointer)setHot(holdTarget(e))});
 const endHold=(go,e)=>{if(!holding||e&&e.pointerId!==holdPointer)return;const target=go&&hot&&holdTarget(e);holding=false;holdPointer=null;setHot(null);pad.classList.remove('adv');fx.classList.remove('pressed');fx.textContent=FXL;if(target){if(target.id==='gear'){blip('morph');openSettings()}else{blip(target.dataset.k,'pick');press(target.dataset.k)}}};
 fx.addEventListener('pointerup',e=>endHold(true,e));

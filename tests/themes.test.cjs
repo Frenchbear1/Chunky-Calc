@@ -41,8 +41,10 @@ test('each element keeps one live reusable swatch, including matching colors',()
  const swatches=nodes.filter(n=>n.className==='color-swatch'),picker=nodes.find(n=>n.attributes['aria-label']==='Color picker'),part=nodes.find(n=>n.attributes['aria-label']==='Calculator element');
  assert.equal(swatches.length,16);assert.equal(new Set(swatches.map(n=>n.dataset.element)).size,16);
  const bg=swatches.find(n=>n.dataset.element==='bg'),panel=swatches.find(n=>n.dataset.element==='panel');
+ assert.equal(bg.attributes['aria-current'],'true');assert.equal(swatches.filter(n=>n.attributes['aria-current']==='true').length,1);
  for(const v of ['#223344','#334455','#445566']){picker.value=v;picker.oninput();assert.equal(bg.style.background,v);assert.equal(panel.style.background,'#112233')}
  assert.equal(nodes.filter(n=>n.className==='color-swatch').length,16);
  part.value='op';part.onchange();bg.onclick();assert.equal(draft.custom.op,'#445566');assert.equal(picker.value,'#445566');assert.equal(swatches.find(n=>n.dataset.element==='op').style.background,'#445566');
+ assert.equal(bg.attributes['aria-current'],'false');assert.equal(swatches.find(n=>n.dataset.element==='op').attributes['aria-current'],'true');assert.equal(swatches.filter(n=>n.attributes['aria-current']==='true').length,1);
  const lightness=nodes.find(n=>n.attributes['aria-label']==='Lightness');lightness.value=80;lightness.oninput();assert.equal(swatches.find(n=>n.dataset.element==='op').style.background,draft.custom.op);assert.equal(bg.style.background,'#445566');
 });

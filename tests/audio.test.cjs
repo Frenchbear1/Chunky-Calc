@@ -5,16 +5,17 @@ const vm=require('node:vm');
 const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
 
 function setup({state='suspended',sound=true,vol=.7,reject=false}={}){
- const starts=[],contexts=[],listeners={};let finish;
+ const starts=[],contexts=[],listeners={},windowListeners={};let finish;
  class AudioContext{
   constructor(){this.state=state;this.currentTime=5;this.destination={};this.calls=0;contexts.push(this)}
   resume(){this.calls++;return reject?Promise.reject(new Error('blocked')):new Promise(resolve=>{finish=()=>{this.state='running';resolve()}})}
+  close(){this.state='closed';this.closed=true;return Promise.resolve()}
   createOscillator(){return {frequency:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect:node=>node,start:t=>starts.push(t),stop(){}}}
   createGain(){return {gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){}}}
  }
- const c=vm.createContext({window:{AudioContext},navigator:{audioSession:{}},document:{hidden:false,addEventListener(t,f){listeners[t]=f}},addEventListener(){},Date,Math});
+ const c=vm.createContext({window:{AudioContext},navigator:{audioSession:{}},document:{hidden:false,addEventListener(t,f){listeners[t]=f}},addEventListener(t,f){windowListeners[t]=f},Date,Math,setTimeout,clearTimeout});
  vm.runInContext(`let ac;const S=${JSON.stringify({sound,vol,silent:true,pack:'soft',dynamic:true})};`+html.slice(html.indexOf('const hasAudioSession='),html.indexOf('function calc('))+';globalThis.settings=S;',c);
- return {c,starts,contexts,listeners,finish:()=>finish()};
+ return {c,starts,contexts,listeners,windowListeners,finish:()=>finish()};
 }
 test('first key waits for audio resume before scheduling its sound',async()=>{
  const t=setup();const pending=t.c.blip('7');assert.equal(t.starts.length,0);assert.equal(t.contexts.length,1);
@@ -34,6 +35,36 @@ test('mute or app hiding during resume prevents delayed sound',async()=>{
 });
 test('failed audio resume does not reject the input handler',async()=>{
  const t=setup({reject:true});await t.c.blip('7');assert.equal(t.starts.length,0);
+});
+test('every background/foreground cycle gets a fresh context on the first key',async()=>{
+ const t=setup();let pending=t.c.blip('7');t.finish();await pending;
+ for(let cycle=0;cycle<3;cycle++){
+  const previous=t.contexts.at(-1),count=t.starts.length;
+  t.c.document.hidden=true;t.listeners.visibilitychange();assert.equal(previous.closed,true);
+  await t.c.blip('8');assert.equal(t.starts.length,count);
+  t.c.document.hidden=false;t.listeners.visibilitychange();t.windowListeners.pageshow();assert.equal(t.contexts.length,cycle+1);
+  pending=t.c.blip('9');assert.equal(t.contexts.length,cycle+2);t.finish();await pending;assert.equal(t.starts.length,count+2);
+ }
+});
+test('page restore replaces even a stale context reporting running',async()=>{
+ const t=setup({state:'running'});await t.c.blip('7');const previous=t.contexts[0];
+ t.windowListeners.pagehide();t.windowListeners.pageshow();await t.c.blip('8');
+ assert.equal(previous.closed,true);assert.equal(t.contexts.length,2);assert.equal(t.starts.length,4);
+});
+test('a late resume from before backgrounding cannot play a stale key',async()=>{
+ const t=setup(),pending=t.c.blip('7'),finishOld=t.finish;
+ t.c.document.hidden=true;t.listeners.visibilitychange();t.c.document.hidden=false;t.listeners.visibilitychange();
+ finishOld();await pending;assert.equal(t.starts.length,0);
+ const next=t.c.blip('8');t.finish();await next;assert.equal(t.starts.length,2);
+});
+test('a hung resume expires and the next tap can create a new context',async()=>{
+ const t=setup();await t.c.blip('7');assert.equal(t.starts.length,0);assert.equal(t.contexts[0].closed,true);
+ const next=t.c.blip('8');t.finish();await next;assert.equal(t.contexts.length,2);assert.equal(t.starts.length,2);
+});
+test('gesture listeners share a pending resume and retain muted settings after return',async()=>{
+ const t=setup();t.listeners.pointerdown();t.listeners.pointerup();const pending=t.c.blip('7');assert.equal(t.contexts[0].calls,1);t.finish();await pending;
+ t.c.document.hidden=true;t.listeners.visibilitychange();t.c.document.hidden=false;t.listeners.visibilitychange();t.c.settings.sound=false;
+ t.listeners.pointerdown();await t.c.blip('8');assert.equal(t.contexts.length,1);assert.equal(t.starts.length,2);
 });
 test('accepted clicks, including edge/accessibility clicks, always pair sound with input',()=>{
  const listeners={},events=[];
