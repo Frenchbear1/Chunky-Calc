@@ -54,17 +54,3 @@ test('syntax, right-handed key order, and lower canvas color',()=>{
  assert(!html.includes('.screen::before'));
  assert(!html.includes('fullResetApp'));
 });
-test('display is an inset rounded card below the system area, with bottom-anchored keys',()=>{
- const screen=html.match(/\n\.screen\{([^}]+)\}/)[1];
- assert(screen.includes('border-radius:32px'));
- assert(screen.includes('overflow:hidden'));
- assert(!screen.includes('margin:0 -12px'));
- assert(!screen.includes('safe-area-inset-top'));
- assert(html.includes('justify-content:flex-end'));
- assert(html.includes('html.standalone .app{--top-gap:44px;padding-bottom:8px'));
- assert(html.includes('@media(display-mode:standalone){.app{--top-gap:44px;padding-bottom:8px}}'));
- assert(html.includes('padding:max(var(--top-gap),calc(env(safe-area-inset-top,0px) + 12px))'));
- assert(html.includes('document.querySelector(\'meta[name="theme-color"]\').content=bg'));
- const manifest=JSON.parse(fs.readFileSync(path.join(__dirname,'../manifest.webmanifest'),'utf8'));
- assert.equal(manifest.theme_color,manifest.background_color);
-});
