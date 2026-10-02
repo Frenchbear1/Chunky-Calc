@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#1c1b19">
 <meta name="application-name" content="Chunky Calc">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Chunky Calc">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="msapplication-TileColor" content="#efe6d4">
@@ -17,6 +17,10 @@
 <link rel="icon" type="image/png" sizes="16x16" href="./assets/icons/favicon-16x16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
 <link rel="mask-icon" href="./assets/icons/safari-pinned-tab.svg" color="#ff7a3d">
+<script>
+if(navigator.standalone||matchMedia('(display-mode:standalone)').matches)document.documentElement.classList.add('standalone');
+try{const s=JSON.parse(localStorage.getItem('cc_set')||'null');if(s&&s.skin){document.documentElement.dataset.skin=s.skin;const c={cream:'#1c1b19',night:'#080915',white:'#ffffff',mint:'#12342b'};document.querySelector('meta[name="theme-color"]').content=c[s.skin]||'#1c1b19'}}catch(e){}
+</script>
 <style>
 :root{box-sizing:border-box;--bg:#efe6d4;--panel:#e2d7c0;--screen:#1c1b19;--ink:#f4ecd8;--dim:#8d8672;--key:#faf4e6;--keyd:#cfc3a8;--keytx:#2a2822;--op:#ff7a3d;--opd:#c4501c;--optx:#fff;--fn:#d9ccb0;--fnd:#b3a583}
 :root[data-skin="night"]{--bg:#0e1020;--panel:#171a33;--screen:#080915;--ink:#e9ecff;--dim:#6b719e;--key:#2a2f5c;--keyd:#14183a;--keytx:#e9ecff;--op:#7c5cff;--opd:#4630b8;--fn:#3a4080;--fnd:#1d2150}
@@ -28,9 +32,12 @@
 .pad,.pad *{touch-action:none}
 ::selection{background:transparent}
 html{width:100%;height:100%;margin:0;background:var(--bg);overscroll-behavior:none}
-body{position:fixed;inset:0;width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none;background:var(--bg);font-family:ui-rounded,"SF Pro Rounded","Nunito",system-ui,sans-serif;display:flex;justify-content:center;transition:background .3s}
+body{position:fixed;inset:0;width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none;background:var(--bg);font-family:ui-rounded,"SF Pro Rounded","Nunito",system-ui,sans-serif;display:flex;justify-content:center}
+html.ready body{transition:background .3s}
 .app{width:100%;max-width:420px;height:100%;min-height:0;display:flex;flex-direction:column;padding:0 12px max(8px,env(safe-area-inset-bottom,0px));gap:12px}
 @supports(height:100dvh){html,body,.app{height:100dvh}}
+html.standalone .app{padding-bottom:0}
+@media(display-mode:standalone){.app{padding-bottom:0}}
 .left{flex:0 0 36%;display:flex;flex-direction:column;gap:12px;min-height:0}
 .screen{position:relative;flex:1;min-height:0;background:var(--screen);border-radius:0 0 32px 32px;margin:0 -12px;padding:calc(env(safe-area-inset-top,0px) + 64px) 30px 16px;color:var(--ink);display:flex;flex-direction:column;box-shadow:inset 0 -6px 14px #0006,0 4px 0 var(--keyd)}
 .fl{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;gap:10px;z-index:2}.fl.l{left:16px}.fl.r{right:16px}
@@ -105,6 +112,7 @@ const persist=()=>{try{localStorage.setItem('cc_set',JSON.stringify(S))}catch(e)
 document.documentElement.dataset.skin=S.skin;
 const syncChrome=()=>{const c=getComputedStyle(document.documentElement),bg=c.getPropertyValue('--bg').trim(),screen=c.getPropertyValue('--screen').trim();document.documentElement.style.backgroundColor=bg;document.body.style.backgroundColor=bg;document.querySelector('meta[name="theme-color"]').content=screen||bg};
 syncChrome();
+requestAnimationFrame(()=>document.documentElement.classList.add('ready'));
 const hasAudioSession=!!navigator.audioSession;
 const syncAudioSession=()=>{if(hasAudioSession){try{navigator.audioSession.type=S.silent?'playback':'auto'}catch(e){}}};
 syncAudioSession();
