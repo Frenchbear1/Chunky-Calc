@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Chunky Calc</title>
 <meta name="description" content="A tactile, customizable calculator with scientific functions, calculation history, sound, and haptics.">
-<meta name="theme-color" content="#1c1b19">
+<meta name="theme-color" content="#efe6d4">
 <meta name="application-name" content="Chunky Calc">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -19,7 +19,7 @@
 <link rel="mask-icon" href="./assets/icons/safari-pinned-tab.svg" color="#ff7a3d">
 <script>
 if(navigator.standalone||matchMedia('(display-mode:standalone)').matches)document.documentElement.classList.add('standalone');
-try{const s=JSON.parse(localStorage.getItem('cc_set')||'null');if(s&&s.skin){document.documentElement.dataset.skin=s.skin;const c={cream:'#1c1b19',night:'#080915',white:'#ffffff',mint:'#12342b'};document.querySelector('meta[name="theme-color"]').content=c[s.skin]||'#1c1b19'}}catch(e){}
+try{const s=JSON.parse(localStorage.getItem('cc_set')||'null');if(s&&s.skin){document.documentElement.dataset.skin=s.skin;const c={cream:'#efe6d4',night:'#0e1020',white:'#ffffff',mint:'#d7efe4'};document.querySelector('meta[name="theme-color"]').content=c[s.skin]||'#efe6d4'}}catch(e){}
 </script>
 <style>
 :root{box-sizing:border-box;--bg:#efe6d4;--panel:#e2d7c0;--screen:#1c1b19;--ink:#f4ecd8;--dim:#8d8672;--key:#faf4e6;--keyd:#cfc3a8;--keytx:#2a2822;--op:#ff7a3d;--opd:#c4501c;--optx:#fff;--fn:#d9ccb0;--fnd:#b3a583}
@@ -34,16 +34,14 @@ try{const s=JSON.parse(localStorage.getItem('cc_set')||'null');if(s&&s.skin){doc
 html{width:100%;height:100%;margin:0;background:var(--bg);overscroll-behavior:none}
 body{position:fixed;inset:0;width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none;background:var(--bg);font-family:ui-rounded,"SF Pro Rounded","Nunito",system-ui,sans-serif;display:flex;justify-content:center}
 html.ready body{transition:background .3s}
-.app{width:100%;max-width:420px;height:100%;min-height:0;display:flex;flex-direction:column;padding:0 12px max(8px,env(safe-area-inset-bottom,0px));gap:12px}
+.app{--top-gap:12px;width:100%;max-width:420px;height:100%;min-height:0;display:flex;flex-direction:column;justify-content:flex-end;padding:max(var(--top-gap),calc(env(safe-area-inset-top,0px) + 12px)) 12px max(8px,env(safe-area-inset-bottom,0px));gap:12px}
 @supports(height:100dvh){html,body,.app{height:100dvh}}
-/* The bottom/home-indicator canvas uses the lower theme, not the display color. */
-html.standalone .app{padding-bottom:8px;background:var(--bg)}
-@media(display-mode:standalone){.app{padding-bottom:8px}}
+/* Leave the system's top treatment on the theme canvas, outside the display card. */
+html.standalone .app{--top-gap:44px;padding-bottom:8px;background:var(--bg)}
+@media(display-mode:standalone){.app{--top-gap:44px;padding-bottom:8px}}
 .left{flex:0 0 36%;display:flex;flex-direction:column;gap:12px;min-height:0}
-.screen{position:relative;flex:1;min-height:0;background:var(--screen);border-radius:0 0 32px 32px;margin:0 -12px;padding:calc(env(safe-area-inset-top,0px) + 4px) 30px 16px;color:var(--ink);display:flex;flex-direction:column;box-shadow:0 4px 0 var(--keyd)}
-/* Extend only the display upward; never tint the canvas below the keypad. */
-.screen::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:100vh;background:var(--screen);pointer-events:none}
-.fl{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;gap:10px;z-index:2}.fl.l{left:16px}.fl.r{right:16px}
+.screen{position:relative;flex:1;min-height:0;background:var(--screen);border-radius:32px;overflow:hidden;padding:12px 18px 16px;color:var(--ink);display:flex;flex-direction:column;box-shadow:0 4px 0 var(--keyd)}
+.fl{position:absolute;top:12px;display:flex;gap:10px;z-index:2}.fl.l{left:16px}.fl.r{right:16px}
 .ib{width:42px;height:42px;border-radius:50%;border:0;background:var(--ib,rgba(255,255,255,.14));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--ink);font-size:19px;box-shadow:0 6px 14px #0006,inset 0 1px 0 #fff3;cursor:pointer;transition:transform .08s}
 .ib:active{transform:scale(.88)}
 .tape{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:20px 0 0 42px;font-size:18px;color:var(--dim);text-align:right;scrollbar-width:none;min-height:0;overscroll-behavior:contain;-webkit-mask-image:linear-gradient(to bottom,transparent,#000 20px);mask-image:linear-gradient(to bottom,transparent,#000 20px)}
@@ -139,7 +137,7 @@ keys.forEach(([k,c])=>mk(basic,k,c));sk.forEach((k,i)=>{const b=document.createE
 const S=Object.assign({skin:'cream',sound:true,silent:false,pack:'arcade',dynamic:true,vol:.7,haptics:true},(()=>{try{return JSON.parse(localStorage.getItem('cc_set'))||{}}catch(e){return{}}})());
 const persist=()=>{try{localStorage.setItem('cc_set',JSON.stringify(S))}catch(e){}};
 document.documentElement.dataset.skin=S.skin;
-const syncChrome=()=>{const c=getComputedStyle(document.documentElement),bg=c.getPropertyValue('--bg').trim(),screen=c.getPropertyValue('--screen').trim();document.documentElement.style.backgroundColor=bg;document.body.style.backgroundColor=bg;document.querySelector('meta[name="theme-color"]').content=screen||bg};
+const syncChrome=()=>{const bg=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();document.documentElement.style.backgroundColor=bg;document.body.style.backgroundColor=bg;document.querySelector('meta[name="theme-color"]').content=bg};
 syncChrome();
 requestAnimationFrame(()=>document.documentElement.classList.add('ready'));
 const hasAudioSession=!!navigator.audioSession;
