@@ -17,7 +17,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="./assets/icons/favicon-16x16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
 <link rel="mask-icon" href="./assets/icons/safari-pinned-tab.svg" color="#ff7a3d">
-<script src="./themes.js?v=15"></script>
+<script src="./themes.js?v=16"></script>
 <script src="./vendor/decimal.js"></script>
 <script src="./math.js?v=13"></script>
 <script>
@@ -37,6 +37,7 @@ try{const s=JSON.parse(localStorage.getItem('cc_set')||'null');if(s&&s.skin){Cal
 :root[data-skin="white"]{--ib:#f0f0f0}
 :root[data-skin="black"]{--bg:#000000;--panel:#191919;--screen:#080808;--ink:#ffffff;--dim:#999999;--key:#333333;--keyd:#171717;--keytx:#ffffff;--op:#ff9500;--opd:#a85e00;--optx:#ffffff;--fn:#555555;--fnd:#2a2a2a;--ib:#333333}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+*{scrollbar-width:none}*::-webkit-scrollbar{display:none;width:0;height:0}
 .pad,.pad *{touch-action:none}
 ::selection{background:transparent}
 html{width:100%;height:100%;margin:0;background:var(--bg);overscroll-behavior:none}
@@ -51,7 +52,7 @@ html.standalone .app{--top-gap:44px;padding-bottom:12px;background:var(--bg)}
 @media(display-mode:standalone){html,body,.app{height:100vh}.app{--top-gap:44px;padding-bottom:12px}}
 .left{flex:1;display:flex;flex-direction:column;gap:12px;min-height:0}
 .screen{position:relative;flex:1;min-height:0;background:var(--screen);border-radius:32px;overflow:hidden;padding:12px 18px 16px;color:var(--ink);display:flex;flex-direction:column;box-shadow:0 4px 0 var(--keyd)}
-.ib{width:52px;height:100%;border-radius:18px;border:0;background:var(--ib);color:var(--ibtx);display:grid;place-items:center;padding:0;box-shadow:0 5px 0 var(--fnd),0 6px 14px #0003;cursor:pointer;transition:transform .08s}
+.ib{width:52px;height:100%;border-radius:18px;border:0;background:var(--ib);color:var(--ibtx);display:grid;place-items:center;padding:0;box-shadow:0 5px 0 var(--part-shadow,var(--fnd)),0 6px 14px #0003;cursor:pointer;transition:transform .08s}
 .ib svg{width:32px;height:32px;pointer-events:none}
 .ib:active{transform:scale(.88)}
 .tape{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:20px 0 0;font-size:18px;color:var(--dim);text-align:right;scrollbar-width:none;min-height:0;overscroll-behavior:contain;-webkit-mask-image:linear-gradient(to bottom,transparent,#000 20px);mask-image:linear-gradient(to bottom,transparent,#000 20px)}
@@ -113,13 +114,15 @@ input[type=range]{accent-color:var(--op);width:55%}
 :root[data-skin="custom"] #setsheet .chip.on{background:#353540;color:#fff}
 .custom-editor{margin-top:14px;padding:12px;border-radius:20px;background:#e9e9ee;color:#242429;display:grid;gap:12px}
 .custom-editor p{font-size:12px;line-height:1.4;margin:0;color:#585864}
-.mini-calc{position:sticky;top:0;z-index:2;width:156px;margin:0 auto;padding:7px;background:var(--bg);border:5px solid #e9e9ee;border-radius:16px;pointer-events:none}
+.mini-preview{position:sticky;top:0;z-index:2;background:#e9e9ee}
+.mini-calc{position:relative;width:156px;margin:0 auto;padding:7px;background:var(--bg);border:5px solid #e9e9ee;border-radius:16px;pointer-events:none}
 .mini-screen{background:var(--screen);border-radius:12px;padding:8px;margin-bottom:6px;box-shadow:0 2px var(--keyd);text-align:right}
-.mini-gear{display:grid;place-items:center;border-radius:6px;background:var(--ib);color:var(--ibtx);font-size:17px;box-shadow:0 2px var(--fnd)}
+.mini-gear{display:grid;place-items:center;border-radius:6px;background:var(--ib);color:var(--ibtx);font-size:17px;box-shadow:0 2px var(--mini-shadow,var(--fnd))}
 .mini-history{color:var(--dim);font-size:10px;margin-top:12px}.mini-answer{color:var(--ink);font-size:27px;font-weight:800}
+.mini-expression{color:var(--dim);font-size:10px;margin-top:4px}
 .mini-pad{background:var(--panel);padding:6px;border-radius:12px;display:grid;gap:5px;grid-template-columns:repeat(4,1fr)}
-.mini-key{display:grid;place-items:center;aspect-ratio:1;border-radius:6px;font-size:12px;font-weight:700;background:var(--key);color:var(--keytx);box-shadow:0 2px var(--keyd)}
-.mini-key.fn{background:var(--fn);color:var(--fntx);box-shadow:0 2px var(--fnd)}.mini-key.op{background:var(--op);color:var(--optx);box-shadow:0 2px var(--opd)}
+.mini-key{display:grid;place-items:center;aspect-ratio:1;border-radius:6px;font-size:12px;font-weight:700;background:var(--key);color:var(--keytx);box-shadow:0 2px var(--mini-shadow,var(--keyd))}
+.mini-key.fn{background:var(--fn);color:var(--fntx);box-shadow:0 2px var(--mini-shadow,var(--fnd))}.mini-key.op{background:var(--op);color:var(--optx);box-shadow:0 2px var(--mini-shadow,var(--opd))}
 .mini-key.fx-sample{grid-column:span 3;aspect-ratio:auto;height:22px;font-size:10px}
 .color-controls{display:grid;gap:10px}.color-controls label{font-size:13px;font-weight:650;display:grid;gap:5px}
 .color-controls select,.hex-input{font:inherit;font-size:16px;border:1px solid #c5c5cf;background:#fff;color:#242429;padding:10px;border-radius:10px;min-width:0;width:100%}
@@ -129,11 +132,27 @@ input[type=range]{accent-color:var(--op);width:55%}
 .custom-presets button{border:1px solid #c5c5cf;border-radius:20px;padding:7px 10px;font:inherit;font-size:12px;background:#fff;color:#242429;cursor:pointer}
 .theme-manager{display:grid;gap:8px;margin:14px 0}.theme-manager label{display:grid;gap:6px;font-size:14px;font-weight:650}
 .theme-manager select{font:inherit;font-size:16px;padding:12px;border-radius:12px;background:#fff;color:#242429;border:1px solid #bcbcc5;width:100%}
-.theme-popup{z-index:20}.theme-popup .panel{height:calc(100dvh - env(safe-area-inset-top,0px) - 12px);max-height:none;background:#f5f5f7;color:#242429}
+.theme-popup{z-index:20;top:0;bottom:auto;height:100%;padding-top:max(12px,env(safe-area-inset-top,0px));align-items:stretch}
+.theme-popup .panel{height:100%;min-height:0;max-height:none;background:#f5f5f7;color:#242429;border-radius:28px 28px 0 0}
+html.standalone .theme-popup{height:100vh}
+@media(display-mode:standalone){.theme-popup{height:100vh}}
 .theme-popup .pill{background:#dddde5;color:#242429}.theme-popup button[type=submit]{background:#353540;color:white}
+.theme-popup button:disabled{opacity:.35;cursor:default}
 .theme-body{overflow-y:auto;min-height:0;flex:1}.theme-body>label{display:grid;gap:6px;font-size:14px;font-weight:650}.theme-error{color:#a82020;font-size:13px;margin:8px 0}
 .reuse-colors{display:flex;flex-wrap:wrap;gap:8px}.color-swatch{width:30px;height:30px;flex:none;border-radius:999px;border:2px solid white;box-shadow:0 0 0 1px #999;cursor:pointer}
 .color-swatch[aria-current=true]{width:54px;box-shadow:0 0 0 2px #6554ad}
+.individual-colors{padding-top:4px;border-top:1px solid #c5c5cf}.individual-colors[hidden]{display:none}
+.element-popup{z-index:30}.pick-body{overflow:auto;min-height:0;flex:1;padding:6px 4px 12px;overscroll-behavior:contain}
+.pick-calc{pointer-events:auto;width:min(100%,340px);padding:14px;border:0;border-radius:24px;cursor:pointer}
+.pick-calc .mini-screen{padding:16px;border-radius:18px;margin-bottom:12px;min-height:135px}
+.pick-calc .mini-history,.pick-calc .mini-expression{font-size:15px}.pick-calc .mini-answer{font-size:46px}
+.pick-calc .mini-pad{gap:10px;padding:12px;border-radius:18px}.pick-calc .mini-key{font-size:24px;border-radius:12px;box-shadow:0 4px var(--mini-shadow,var(--keyd))}
+.pick-calc .mini-key.fn{box-shadow:0 4px var(--mini-shadow,var(--fnd))}.pick-calc .mini-key.op{box-shadow:0 4px var(--mini-shadow,var(--opd))}
+.pick-calc .mini-gear{font-size:30px}.pick-calc .fx-sample{height:44px;font-size:13px;aspect-ratio:auto}
+.pick-selected{outline:3px solid #6554ad!important;outline-offset:3px}
+.pick-footer{flex:none;display:grid;gap:8px;padding-top:6px;border-top:1px solid #d5d5de}.pick-name{text-align:center;font-size:14px;font-weight:700}
+.pick-modes,.pick-parts,.pick-arrows{display:flex;justify-content:center;gap:8px}.pick-arrows button{min-width:48px;min-height:44px;font-size:20px}
+.pick-hint{font-size:13px;margin:0;text-align:center}.pick-parts [aria-pressed=true],.pick-modes [aria-pressed=true]{background:#6554ad;color:white}
 </style></head><body>
 <div class="app">
  <div class="left">
