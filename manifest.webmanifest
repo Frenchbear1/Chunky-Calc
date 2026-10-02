@@ -1,7 +1,7 @@
 {
   "name": "Chunky Calc",
   "short_name": "Chunky Calc",
-  "description": "A tactile, customizable calculator with scientific functions, calculation history, sound, and haptics.",
+  "description": "A tactile, customizable calculator with scientific functions, calculation history, and sound.",
   "id": "./",
   "start_url": "./",
   "scope": "./",

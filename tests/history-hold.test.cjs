@@ -25,8 +25,8 @@ function setup(){
  return {b,status,context,consume,fire,advance,windowListeners,documentListeners,get saved(){return saved},get renders(){return renders}};
 }
 
-test('clears only history at 2000 ms and consumes the release click',()=>{
- const t=setup();t.fire('pointerdown');t.advance(1999);assert.equal(t.context.hist.length,1);
+test('clears only history at 1000 ms and consumes the release click',()=>{
+ const t=setup();t.fire('pointerdown');t.advance(999);assert.equal(t.context.hist.length,1);
  t.advance(1);assert.equal(t.context.hist.length,0);assert.deepEqual(t.saved,[]);assert.equal(t.renders,1);
  assert.equal(t.context.expr,'123');assert.equal(t.context.settings.skin,'mint');assert.equal(t.b.textContent,'✓');
  t.fire('pointerup');assert.equal(t.consume(),true);assert.equal(t.consume(),false);t.advance(850);assert.equal(t.b.textContent,'AC');
@@ -36,7 +36,7 @@ test('short taps do not clear history and retain the normal AC click',()=>{
  assert.equal(t.context.hist.length,1);assert.equal(t.saved,null);assert.equal(t.consume(),false);
 });
 for(const type of ['pointercancel','pointerleave','lostpointercapture'])test(type+' cancels the destructive hold',()=>{
- const t=setup();t.fire('pointerdown');t.advance(1500);t.fire(type);t.advance(1000);assert.equal(t.context.hist.length,1);
+ const t=setup();t.fire('pointerdown');t.advance(750);t.fire(type);t.advance(1000);assert.equal(t.context.hist.length,1);
 });
 test('moving a finger away, hiding the app, and losing focus cancel the hold',()=>{
  for(const action of [t=>t.fire('pointermove',{clientX:65}),t=>t.windowListeners.blur(),t=>{t.context.document.hidden=true;t.documentListeners.visibilitychange()}]){
