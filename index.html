@@ -190,6 +190,16 @@ const sb=$('sbody'),mkEl=(t,c,x)=>{const e=document.createElement(t);if(c)e.clas
 const chip=(txt,on,fn)=>{const b=mkEl('button','chip'+(on?' on':''),txt);b.onclick=fn;return b};
 const sec=t=>sb.appendChild(mkEl('div','day',t)),rw=(l,el)=>{const d=mkEl('div','row');d.append(mkEl('span','',l),el);sb.appendChild(d)};
 const tg=key=>chip(S[key]?'On':'Off',S[key],()=>{S[key]=!S[key];persist();buildSet();blip(key==='haptics'?'=':'5')});
+let maintenance=false,secretHold=null;const secretPointers=new Set();
+const clearSecretHold=()=>{if(secretHold){clearTimeout(secretHold);secretHold=null}};
+async function clearCacheAndUpdate(b){
+ b.disabled=true;b.textContent='Updating…';
+ try{
+  if('caches' in window){const names=await caches.keys();await Promise.all(names.filter(n=>n.startsWith('chunky-calc-')).map(n=>caches.delete(n)))}
+  if('serviceWorker' in navigator){const reg=await navigator.serviceWorker.getRegistration();if(reg)await reg.update()}
+  const u=new URL(location.href);u.searchParams.set('update',Date.now());location.replace(u.href)
+ }catch(e){b.disabled=false;b.textContent='Try again'}
+}
 function buildSet(){sb.innerHTML='';
  sec('Theme');const w=mkEl('div','sws');THEMES.forEach(([id,n,bg])=>{const b=mkEl('button','sw'+(S.skin===id?' on':''));b.style.background=bg;b.setAttribute('aria-label',n);b.onclick=()=>{S.skin=id;document.documentElement.dataset.skin=id;syncChrome();persist();buildSet()};w.appendChild(b)});sb.appendChild(w);
  sec('Sound');rw('Sound effects',tg('sound'));
@@ -197,10 +207,16 @@ function buildSet(){sb.innerHTML='';
  const r=mkEl('input');r.type='range';r.min=0;r.max=100;r.value=S.vol*100;r.oninput=()=>{S.vol=r.value/100;persist()};r.onchange=()=>blip('5');rw('Volume',r);
  rw('Keys sound different',tg('dynamic'));rw('Haptics',tg('haptics'));
  sec('Sound pack');const c=mkEl('div','chips');Object.entries(PK).forEach(([id,p])=>c.appendChild(chip(p.n,S.pack===id,()=>{S.pack=id;persist();buildSet();blip('3');setTimeout(()=>blip('7'),110);setTimeout(()=>blip('='),230)})));sb.appendChild(c);
- sec('History');rw('Past calculations',chip('View last 3 days',false,()=>{$('setsheet').classList.remove('on');showHist()}))}
+ sec('History');rw('Past calculations',chip('View last 3 days',false,()=>{$('setsheet').classList.remove('on');showHist()}));
+ if(maintenance){sec('Maintenance');rw('Refresh app files',chip('Clear Cache & Update',false,e=>clearCacheAndUpdate(e.currentTarget)))}}
 $('gear').onclick=()=>{buildSet();$('setsheet').classList.add('on')};
-$('sx').onclick=()=>$('setsheet').classList.remove('on');
-$('setsheet').onclick=e=>{if(e.target.id==='setsheet')$('setsheet').classList.remove('on')};
+const settingsPanel=$('setsheet').querySelector('.panel');
+settingsPanel.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')return;secretPointers.add(e.pointerId);if(secretPointers.size>=2&&!maintenance){clearSecretHold();secretHold=setTimeout(()=>{if(secretPointers.size<2)return;maintenance=true;buildSet();requestAnimationFrame(()=>sb.scrollTo({top:sb.scrollHeight,behavior:'smooth'}));blip('=')},900)}});
+const endSecret=e=>{secretPointers.delete(e.pointerId);if(secretPointers.size<2)clearSecretHold()};
+['pointerup','pointercancel','pointerleave'].forEach(n=>settingsPanel.addEventListener(n,endSecret));
+const closeSettings=()=>{clearSecretHold();secretPointers.clear();$('setsheet').classList.remove('on')};
+$('sx').onclick=closeSettings;
+$('setsheet').onclick=e=>{if(e.target.id==='setsheet')closeSettings()};
 const fx=$('fx'),FXL='ƒ(x)  hold & slide';let hot=null,holding=false;
 const setHot=b=>{if(b===hot)return;hot&&hot.classList.remove('hot');hot=b;if(b){b.classList.add('hot');blip(b.dataset.k,[...advg.children].indexOf(b))}};
 fx.addEventListener('pointerdown',e=>{e.preventDefault();holding=true;try{fx.setPointerCapture(e.pointerId)}catch(_){}pad.classList.add('adv');fx.classList.add('pressed');fx.textContent='Slide to a key, release';blip('morph')});
@@ -216,6 +232,6 @@ addEventListener('keydown',e=>{const m={'*':'×','/':'÷','-':'−','Enter':'=',
 addEventListener('resize',()=>render());
 render();
 if('serviceWorker' in navigator){
- addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+ addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).catch(()=>{}));
 }
 </script></body></html>
