@@ -192,13 +192,15 @@ const sec=t=>sb.appendChild(mkEl('div','day',t)),rw=(l,el)=>{const d=mkEl('div',
 const tg=key=>chip(S[key]?'On':'Off',S[key],()=>{S[key]=!S[key];persist();buildSet();blip(key==='haptics'?'=':'5')});
 let maintenance=false,secretHold=null;const secretPointers=new Set();
 const clearSecretHold=()=>{if(secretHold){clearTimeout(secretHold);secretHold=null}};
-async function clearCacheAndUpdate(b){
- b.disabled=true;b.textContent='Updating…';
+async function fullResetApp(b){
+ if(!b.dataset.confirm){b.dataset.confirm='1';b.textContent='Tap Again to Reset';setTimeout(()=>{if(b.dataset.confirm){delete b.dataset.confirm;b.textContent='Full Reset App'}},5000);return}
+ b.disabled=true;b.textContent='Resetting…';
  try{
+  localStorage.removeItem('cc_hist');localStorage.removeItem('cc_set');
+  if('serviceWorker' in navigator){const base=new URL('./',location.href).pathname,regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.filter(r=>new URL(r.scope).pathname===base).map(r=>r.unregister()))}
   if('caches' in window){const names=await caches.keys();await Promise.all(names.filter(n=>n.startsWith('chunky-calc-')).map(n=>caches.delete(n)))}
-  if('serviceWorker' in navigator){const reg=await navigator.serviceWorker.getRegistration();if(reg)await reg.update()}
-  const u=new URL(location.href);u.searchParams.set('update',Date.now());location.replace(u.href)
- }catch(e){b.disabled=false;b.textContent='Try again'}
+  const u=new URL(location.href);u.search='';u.searchParams.set('reset',Date.now());location.replace(u.href)
+ }catch(e){b.disabled=false;delete b.dataset.confirm;b.textContent='Try Reset Again'}
 }
 function buildSet(){sb.innerHTML='';
  sec('Theme');const w=mkEl('div','sws');THEMES.forEach(([id,n,bg])=>{const b=mkEl('button','sw'+(S.skin===id?' on':''));b.style.background=bg;b.setAttribute('aria-label',n);b.onclick=()=>{S.skin=id;document.documentElement.dataset.skin=id;syncChrome();persist();buildSet()};w.appendChild(b)});sb.appendChild(w);
@@ -208,7 +210,7 @@ function buildSet(){sb.innerHTML='';
  rw('Keys sound different',tg('dynamic'));rw('Haptics',tg('haptics'));
  sec('Sound pack');const c=mkEl('div','chips');Object.entries(PK).forEach(([id,p])=>c.appendChild(chip(p.n,S.pack===id,()=>{S.pack=id;persist();buildSet();blip('3');setTimeout(()=>blip('7'),110);setTimeout(()=>blip('='),230)})));sb.appendChild(c);
  sec('History');rw('Past calculations',chip('View last 3 days',false,()=>{$('setsheet').classList.remove('on');showHist()}));
- if(maintenance){sec('Maintenance');rw('Refresh app files',chip('Clear Cache & Update',false,e=>clearCacheAndUpdate(e.currentTarget)))}}
+ if(maintenance){sec('Maintenance');const reset=chip('Full Reset App',false,e=>fullResetApp(e.currentTarget));reset.style.background='#d92d20';reset.style.color='#fff';rw('Erase all Chunky Calc data',reset)}}
 $('gear').onclick=()=>{buildSet();$('setsheet').classList.add('on')};
 const settingsPanel=$('setsheet').querySelector('.panel');
 settingsPanel.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')return;secretPointers.add(e.pointerId);if(secretPointers.size>=2&&!maintenance){clearSecretHold();secretHold=setTimeout(()=>{if(secretPointers.size<2)return;maintenance=true;buildSet();requestAnimationFrame(()=>sb.scrollTo({top:sb.scrollHeight,behavior:'smooth'}));blip('=')},900)}});
