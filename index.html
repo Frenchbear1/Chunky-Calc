@@ -17,10 +17,12 @@
 <link rel="icon" type="image/png" sizes="16x16" href="./assets/icons/favicon-16x16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
 <link rel="mask-icon" href="./assets/icons/safari-pinned-tab.svg" color="#ff7a3d">
-<script src="./themes.js"></script>
+<script src="./themes.js?v=13"></script>
+<script src="./vendor/decimal.js"></script>
+<script src="./math.js?v=13"></script>
 <script>
 if(navigator.standalone||matchMedia('(display-mode:standalone)').matches)document.documentElement.classList.add('standalone');
-try{const s=JSON.parse(localStorage.getItem('cc_set')||'null');if(s&&s.skin){CalcThemes.apply(s);const c={cream:'#efe6d4',night:'#0e1020',black:'#000000',white:'#ffffff',mint:'#d7efe4'};document.querySelector('meta[name="theme-color"]').content=s.skin==='custom'?CalcThemes.palette(s.custom).bg:c[s.skin]||'#efe6d4'}}catch(e){}
+try{const s=JSON.parse(localStorage.getItem('cc_set')||'null');if(s&&s.skin){CalcThemes.restore(s);CalcThemes.apply(s);const c={cream:'#efe6d4',night:'#0e1020',black:'#000000',white:'#ffffff',mint:'#d7efe4'};document.querySelector('meta[name="theme-color"]').content=s.skin==='custom'?CalcThemes.palette(s.custom).bg:c[s.skin]||'#efe6d4'}}catch(e){}
 </script>
 <style>
 :root{box-sizing:border-box;--bg:#efe6d4;--panel:#e2d7c0;--screen:#1c1b19;--ink:#f4ecd8;--dim:#8d8672;--key:#faf4e6;--keyd:#cfc3a8;--keytx:#2a2822;--op:#ff7a3d;--opd:#c4501c;--optx:#fff;--fn:#d9ccb0;--fnd:#b3a583}
@@ -120,11 +122,17 @@ input[type=range]{accent-color:var(--op);width:55%}
 .hex-input{-webkit-user-select:text;user-select:text}.hex-input[aria-invalid=true]{border-color:#b42318}
 .color-controls input[type=range]{width:100%;accent-color:#6554ad}.custom-presets{display:flex;flex-wrap:wrap;gap:6px}
 .custom-presets button{border:1px solid #c5c5cf;border-radius:20px;padding:7px 10px;font:inherit;font-size:12px;background:#fff;color:#242429;cursor:pointer}
+.theme-manager{display:grid;gap:8px;margin:14px 0}.theme-manager label{display:grid;gap:6px;font-size:14px;font-weight:650}
+.theme-manager select{font:inherit;font-size:16px;padding:12px;border-radius:12px;background:#fff;color:#242429;border:1px solid #bcbcc5;width:100%}
+.theme-popup{z-index:20}.theme-popup .panel{height:calc(100dvh - env(safe-area-inset-top,0px) - 12px);max-height:none;background:#f5f5f7;color:#242429}
+.theme-popup .pill{background:#dddde5;color:#242429}.theme-popup button[type=submit]{background:#353540;color:white}
+.theme-body{overflow-y:auto;min-height:0;flex:1}.theme-body>label{display:grid;gap:6px;font-size:14px;font-weight:650}.theme-error{color:#a82020;font-size:13px;margin:8px 0}
+.reuse-colors{display:flex;flex-wrap:wrap;gap:8px}.color-swatch{width:30px;height:30px;flex:none;border-radius:50%;border:2px solid white;box-shadow:0 0 0 1px #999;cursor:pointer}
 </style></head><body>
 <div class="app">
  <div class="left">
   <div class="screen">
-   <div class="fl l"><button class="ib" id="gear" title="Settings">⚙️</button></div>
+   <div class="fl l"><button class="ib" id="gear" title="Settings" aria-label="Settings">⚙︎</button></div>
    <div class="tape" id="tape"></div><div class="expr"><span id="expr"></span></div><div class="main" id="main">0</div>
   </div>
  </div>
@@ -176,6 +184,7 @@ keys.forEach(([k,c])=>mk(basic,k,c));sk.forEach((k,i)=>{const b=document.createE
 const S=Object.assign({skin:'cream',sound:true,silent:false,pack:'arcade',dynamic:true,vol:.7},(()=>{try{return JSON.parse(localStorage.getItem('cc_set'))||{}}catch(e){return{}}})());
 delete S.haptics;
 const persist=()=>{try{localStorage.setItem('cc_set',JSON.stringify(S))}catch(e){}};
+CalcThemes.restore(S);persist();
 CalcThemes.apply(S);
 const syncChrome=()=>{const bg=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();document.documentElement.style.backgroundColor=bg;document.body.style.backgroundColor=bg;document.querySelector('meta[name="theme-color"]').content=bg};
 syncChrome();
@@ -216,30 +225,17 @@ async function blip(k,idx){const kind=idx==='pick'?'pick':typeof idx==='number'?
   let n=base;if(dy)n=kind==='digit'?SC[+k]:kind==='dot'?5:kind==='op'?OPN[k]:kind==='fn'?8:kind==='back'?-7:kind==='tick'?10+idx:kind==='pick'?24:kind==='morph'?0:base;
   T(n,P.d*(kind==='back'||kind==='tick'?.6:1),kind==='morph'?{bend:2}:kind==='tick'?{g:P.g*.7}:{});
   if(kind==='pick'&&dy)T(31,P.d*1.3,{delay:.06})}catch(e){}}
-function calc(s){s=s.replace(/−/g,'-');let o=(s.match(/\(/g)||[]).length-(s.match(/\)/g)||[]).length;while(o-->0)s+=')';
- const t=s.match(/\d+\.?\d*|\.\d+|asin|acos|atan|abs|sin|cos|tan|ln|log|√|π|e|[-+×÷^%()!]/g)||[];let i=0;
- const r=x=>deg?x*Math.PI/180:x,F={sin:x=>Math.sin(r(x)),cos:x=>Math.cos(r(x)),tan:x=>Math.tan(r(x)),ln:Math.log,log:Math.log10,'√':Math.sqrt,abs:Math.abs,asin:x=>{const v=Math.asin(x);return deg?v*180/Math.PI:v},acos:x=>{const v=Math.acos(x);return deg?v*180/Math.PI:v},atan:x=>{const v=Math.atan(x);return deg?v*180/Math.PI:v}};
- const prim=()=>{const a=t[i++];if(a==='('){const v=ex();if(t[i]===')')i++;return v}
-  if(a==='π')return Math.PI;if(a==='e')return Math.E;
-  if(F[a]){if(t[i]!=='(')throw 0;i++;const v=ex();if(t[i]===')')i++;return F[a](v)}
-  const v=parseFloat(a);if(isNaN(v))throw 0;return v};
- const post=()=>{let v=prim();while(t[i]==='%'||t[i]==='!'){if(t[i++]==='%')v/=100;else{if(v<0||v!==Math.floor(v)||v>170)throw 1;let f=1;for(let k=2;k<=v;k++)f*=k;v=f}}return v};
- const pw=()=>{const b=post();if(t[i]==='^'){i++;return Math.pow(b,un())}return b};
- const un=()=>{if(t[i]==='-'){i++;return -un()}return pw()};
- const term=()=>{let v=un();while(t[i]==='×'||t[i]==='÷'){const o=t[i++],n=un();v=o==='×'?v*n:v/n}return v};
- const ex=()=>{let v=term();while(t[i]==='+'||t[i]==='-'){const o=t[i++],n=term();v=o==='+'?v+n:v-n}return v};
- let v=ex();if(i<t.length)throw 0;if(!isFinite(v))throw 1;if(Math.abs(v)<1e-12)v=0;v=parseFloat(v.toPrecision(12));if(String(v).includes('e'))throw 1;return v}
+function calc(s){return CalcMath.calculate(s,deg)}
 function prev(e){for(let n=0;n<6&&e;n++){try{return calc(e)}catch(x){e=e.slice(0,-1)}}return null}
-const fmt=n=>{const m=String(n).match(/^(-?)(\d*)(\.\d*)?$/);return m?m[1]+m[2].replace(/\B(?=(\d{3})+(?!\d))/g,',')+(m[3]||''):String(n)};
-const fmtE=e=>e.replace(/\d+\.?\d*/g,m=>fmt(m)).replace(/([+−×÷^])/g,' $1 ');
-const neg=n=>String(n).replace('-','−');
+const fmt=n=>CalcMath.format(n),fmtE=e=>CalcMath.formatExpression(e);
+const neg=n=>String(n).replace(/-/g,'−');
 // Toggle the active number/parenthesized operand, not the entire pending calculation.
 function toggleSign(s){
  if(!s||/[+×÷^(]$/.test(s))return s+'−';
  if(s.endsWith('−')){const p=s.slice(0,-1);return !p||/[+−×÷^(]$/.test(p)?p:s+'−'}
  let start=s.length-1;while(start>=0&&/[!%]/.test(s[start]))start--;
  if(s[start]===')'){let depth=1;while(start>0&&depth){start--;if(s[start]===')')depth++;if(s[start]==='(')depth--}while(start>0&&/[a-z√]/.test(s[start-1]))start--}
- else if(/[πe]/.test(s[start])){}else{while(start>0&&/[\d.]/.test(s[start-1]))start--}
+ else if(/[πe]/.test(s[start])){}else{const numeric=s.slice(0,start+1).match(/(?:\d+\.?\d*|\.\d+)(?:e[+−-]?\d+)?$/);if(numeric)start=numeric.index}
  const sign=start-1;
  if(s[sign]==='−'&&(sign===0||/[+−×÷^(]/.test(s[sign-1])))return s.slice(0,sign)+s.slice(start);
  return s.slice(0,start)+'−'+s.slice(start)
@@ -263,7 +259,7 @@ function press(k){const last=expr.slice(-1);
  rs();
  if(k==='.'){const c=expr.split(/[+−×÷^(]/).pop();if(c.includes('.'))return;if(!c)expr+='0'}
  if(/[%!)πe]$/.test(expr))expr+='×';
- const c=expr.split(/[+−×÷^(]/).pop();if(c.replace('.','').length>=15)return shake();
+ const c=expr.split(/[+−×÷^(]/).pop();if(c.replace('.','').length>=256||expr.length>=4096)return shake();
  if(k!=='.'&&c==='0')expr=expr.slice(0,-1);
  expr+=k;render()}
 function shake(){blip('err');const m=$('main');m.classList.remove('shake');void m.offsetWidth;m.classList.add('shake')}
@@ -272,7 +268,7 @@ function render(pop){let v='0';$('expr').textContent=after?fmtE(lastE)+' =':fmtE
  if(after)v=fmt(expr.replace('−','-'));
  else if(expr){if(/^−?[\d.]*$/.test(expr))v=fmt(expr.replace('−','-'))||'0';else{const p=prev(expr);v=p===null?(fmt(expr.split(/[+−×÷^(]/).pop())||'0'):fmt(p)}}
  const m=$('main');
- m.textContent=v;m.style.fontSize=Math.max(28,Math.min(76,520/Math.max(1,v.length)))+'px';
+ m.textContent=v;m.style.fontSize=Math.max(18,Math.min(76,520/Math.max(1,v.length)))+'px';
  advg.querySelector('[data-k="Deg"]').textContent=deg?'Deg':'Rad';
  if(pop){m.classList.add('pop');setTimeout(()=>m.classList.remove('pop'),120)}
  const t=$('tape');t.innerHTML='';hist.slice(-30).forEach(h=>{const d=document.createElement('div');d.innerHTML=fmtE(h.e)+' = <b>'+fmt(h.r)+'</b>';d.onclick=()=>{expr=neg(h.r);after=false;render()};t.appendChild(d)});t.scrollTop=t.scrollHeight}
@@ -293,8 +289,8 @@ const chip=(txt,on,fn)=>{const b=mkEl('button','chip'+(on?' on':''),txt);b.oncli
 const sec=t=>sb.appendChild(mkEl('div','day',t)),rw=(l,el)=>{const d=mkEl('div','row');d.append(mkEl('span','',l),el);sb.appendChild(d)};
 const tg=key=>chip(S[key]?'On':'Off',S[key],()=>{S[key]=!S[key];persist();buildSet();blip('5')});
 function buildSet(){sb.innerHTML='';
- sec('Theme');const w=mkEl('div','sws');THEMES.forEach(([id,n,bg])=>{const wrap=mkEl('div','theme-option'),b=mkEl('button','sw'+(S.skin===id?' on':''));b.style.background=bg;b.setAttribute('aria-label',n);b.setAttribute('aria-pressed',String(S.skin===id));b.onclick=()=>{if(id==='custom'&&!S.custom)S.custom=CalcThemes.snapshot();S.skin=id;CalcThemes.apply(S);syncChrome();persist();buildSet()};wrap.append(b,mkEl('span','',n));w.appendChild(wrap)});sb.appendChild(w);
- if(S.skin==='custom')CalcThemes.editor(sb,S,()=>{CalcThemes.apply(S);syncChrome();persist()});
+ sec('Theme');const w=mkEl('div','sws');THEMES.filter(([id])=>id!=='custom').forEach(([id,n,bg])=>{const wrap=mkEl('div','theme-option'),b=mkEl('button','sw'+(S.skin===id?' on':''));b.style.background=bg;b.setAttribute('aria-label',n);b.setAttribute('aria-pressed',String(S.skin===id));b.onclick=()=>{S.skin=id;CalcThemes.apply(S);syncChrome();persist();buildSet()};wrap.append(b,mkEl('span','',n));w.appendChild(wrap)});sb.appendChild(w);
+ CalcThemes.manager(sb,S,()=>{CalcThemes.apply(S);syncChrome();persist();buildSet()});
  sec('Sound');rw('Sound effects',tg('sound'));
  if(hasAudioSession)rw('Play through Silent Mode',chip(S.silent?'On':'Off',S.silent,()=>{S.silent=!S.silent;syncAudioSession();persist();buildSet();blip('5')}));
  const r=mkEl('input');r.type='range';r.min=0;r.max=100;r.value=S.vol*100;r.oninput=()=>{S.vol=r.value/100;persist()};r.onchange=()=>blip('5');rw('Volume',r);
