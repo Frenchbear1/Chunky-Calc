@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chunky-calc-v6';
+const CACHE_NAME = 'chunky-calc-v7';
 const APP_SHELL = [
   './',
   './index.html',

@@ -36,11 +36,13 @@ body{position:fixed;inset:0;width:100%;height:100%;margin:0;overflow:hidden;over
 html.ready body{transition:background .3s}
 .app{width:100%;max-width:420px;height:100%;min-height:0;display:flex;flex-direction:column;padding:0 12px max(8px,env(safe-area-inset-bottom,0px));gap:12px}
 @supports(height:100dvh){html,body,.app{height:100dvh}}
-html.standalone,html.standalone body{background-color:var(--screen)}
-html.standalone .app{padding-bottom:0;background:var(--bg)}
-@media(display-mode:standalone){.app{padding-bottom:0}}
+/* The bottom/home-indicator canvas uses the lower theme, not the display color. */
+html.standalone .app{padding-bottom:8px;background:var(--bg)}
+@media(display-mode:standalone){.app{padding-bottom:8px}}
 .left{flex:0 0 36%;display:flex;flex-direction:column;gap:12px;min-height:0}
 .screen{position:relative;flex:1;min-height:0;background:var(--screen);border-radius:0 0 32px 32px;margin:0 -12px;padding:calc(env(safe-area-inset-top,0px) + 4px) 30px 16px;color:var(--ink);display:flex;flex-direction:column;box-shadow:0 4px 0 var(--keyd)}
+/* Extend only the display upward; never tint the canvas below the keypad. */
+.screen::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:100vh;background:var(--screen);pointer-events:none}
 .fl{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;gap:10px;z-index:2}.fl.l{left:16px}.fl.r{right:16px}
 .ib{width:42px;height:42px;border-radius:50%;border:0;background:var(--ib,rgba(255,255,255,.14));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--ink);font-size:19px;box-shadow:0 6px 14px #0006,inset 0 1px 0 #fff3;cursor:pointer;transition:transform .08s}
 .ib:active{transform:scale(.88)}
@@ -66,6 +68,7 @@ html.standalone .app{padding-bottom:0;background:var(--bg)}
 .k.pressed,.k:active{transform:translateY(calc(var(--d) - 1px));box-shadow:0 1px 0 var(--sd),0 2px 4px #0003}
 @keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 .shake{animation:shake .25s}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .pill{border:0;border-radius:99px;padding:8px 14px;font-weight:700;font-size:13px;font-family:inherit;background:var(--fn);color:var(--keytx);cursor:pointer}
 .sheet{position:fixed;inset:0;background:#0007;display:none;align-items:flex-end;justify-content:center;z-index:10}
 .sheet.on{display:flex}
@@ -95,22 +98,48 @@ input[type=range]{accent-color:var(--op);width:55%}
 </div>
 <div class="sheet" id="sheet"><div class="panel"><div class="ph"><b>History · last 3 days</b><button class="pill" id="hclr">Clear</button><button class="pill" id="hx">✕</button></div><div id="hlist"></div></div></div>
 <div class="sheet" id="setsheet"><div class="panel"><div class="ph"><b>Settings</b><button class="pill" id="sx">✕</button></div><div id="sbody"></div></div></div>
+<div class="sr-only" id="status" role="status" aria-live="polite"></div>
 <script>
 const $=id=>document.getElementById(id),pad=$('pad'),basic=$('basic'),advg=$('advg');
 const keys=[['AC','fn'],['⌫','fn'],['%','fn'],['÷','op'],['7'],['8'],['9'],['×','op'],['4'],['5'],['6'],['−','op'],['1'],['2'],['3'],['+','op'],['±','fn'],['0'],['.'],['=','op']];
-const sk=['(',')','^','√','x²','x³','x⁻¹','π','sin','cos','tan','Deg','asin','acos','atan','abs','ln','log','e','!'];
+const sk=['^','√','(',')','x²','x³','x⁻¹','π','sin','cos','tan','Deg','asin','acos','atan','abs','ln','log','e','!'];
 const OPS='+−×÷^',FN=['sin','cos','tan','asin','acos','atan','abs','ln','log','√'];
 let expr='',after=false,lastE='',hist=[],deg=true,ac;
 try{hist=JSON.parse(localStorage.getItem('cc_hist')||'[]').filter(h=>h.t>Date.now()-2592e5)}catch(e){hist=[]}
+function bindHistoryHold(b){
+ let timer=null,feedback=null,pointer=null,suppressClick=false,startX=0,startY=0;
+ const cancel=()=>{clearTimeout(timer);timer=null;pointer=null};
+ b.title='Clear input. Hold for 2 seconds to clear history.';b.setAttribute('aria-label','AC; hold for 2 seconds to clear history');
+ b.addEventListener('pointerdown',e=>{
+  if(e.button!==0||!e.isPrimary)return;
+  cancel();clearTimeout(feedback);b.textContent='AC';suppressClick=false;
+  pointer=e.pointerId;startX=e.clientX;startY=e.clientY;
+  timer=setTimeout(()=>{
+   timer=null;pointer=null;suppressClick=true;
+   hist=[];save();render();if($('sheet').classList.contains('on'))showHist();
+   b.textContent='✓';$('status').textContent='History cleared';blip('=');
+   feedback=setTimeout(()=>{b.textContent='AC';$('status').textContent=''},850)
+  },2000)
+ });
+ b.addEventListener('pointermove',e=>{
+  if(e.pointerId!==pointer)return;
+  const r=b.getBoundingClientRect();
+  if(Math.hypot(e.clientX-startX,e.clientY-startY)>12||e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)cancel()
+ });
+ ['pointerup','pointercancel','pointerleave','lostpointercapture'].forEach(type=>b.addEventListener(type,cancel));
+ addEventListener('blur',cancel);document.addEventListener('visibilitychange',()=>{if(document.hidden)cancel()});
+ return ()=>{const consumed=suppressClick;suppressClick=false;return consumed}
+}
 function mk(host,k,c){const b=document.createElement('button');b.className='k '+(c||'');b.textContent=k;b.dataset.k=k;
+ const consumeHold=k==='AC'?bindHistoryHold(b):null;
  b.addEventListener('pointerdown',()=>{b.classList.add('pressed');blip(k)});
  ['pointerup','pointerleave','pointercancel'].forEach(e=>b.addEventListener(e,()=>b.classList.remove('pressed')));
- b.addEventListener('click',()=>press(k));host.appendChild(b)}
+ b.addEventListener('click',e=>{if(consumeHold&&consumeHold()){e.preventDefault();return}press(k)});host.appendChild(b)}
 keys.forEach(([k,c])=>mk(basic,k,c));sk.forEach((k,i)=>{const b=document.createElement('button');b.className='k';b.textContent=k;b.dataset.k=k;b.style.setProperty('--i',i);advg.appendChild(b)});
 const S=Object.assign({skin:'cream',sound:true,silent:false,pack:'arcade',dynamic:true,vol:.7,haptics:true},(()=>{try{return JSON.parse(localStorage.getItem('cc_set'))||{}}catch(e){return{}}})());
 const persist=()=>{try{localStorage.setItem('cc_set',JSON.stringify(S))}catch(e){}};
 document.documentElement.dataset.skin=S.skin;
-const syncChrome=()=>{const c=getComputedStyle(document.documentElement),bg=c.getPropertyValue('--bg').trim(),screen=c.getPropertyValue('--screen').trim(),canvas=document.documentElement.classList.contains('standalone')?screen:bg;document.documentElement.style.backgroundColor=canvas;document.body.style.backgroundColor=canvas;document.querySelector('meta[name="theme-color"]').content=screen||bg};
+const syncChrome=()=>{const c=getComputedStyle(document.documentElement),bg=c.getPropertyValue('--bg').trim(),screen=c.getPropertyValue('--screen').trim();document.documentElement.style.backgroundColor=bg;document.body.style.backgroundColor=bg;document.querySelector('meta[name="theme-color"]').content=screen||bg};
 syncChrome();
 requestAnimationFrame(()=>document.documentElement.classList.add('ready'));
 const hasAudioSession=!!navigator.audioSession;
