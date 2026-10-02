@@ -20,6 +20,7 @@ Once loaded, the calculator works offline. Settings and the last three days of c
 - Hold-and-slide scientific function picker
 - Four color themes
 - Six sound packs with adjustable volume
+- Optional playback through Silent Mode on supported devices
 - Optional haptic feedback
 - Three-day calculation history
 - Keyboard support

@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Chunky Calc</title>
 <meta name="description" content="A tactile, customizable calculator with scientific functions, calculation history, sound, and haptics.">
-<meta name="theme-color" content="#efe6d4">
+<meta name="theme-color" content="#1c1b19">
 <meta name="application-name" content="Chunky Calc">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -27,9 +27,10 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .pad,.pad *{touch-action:none}
 ::selection{background:transparent}
-html,body{height:100%;margin:0}
-body{background:var(--bg);font-family:ui-rounded,"SF Pro Rounded","Nunito",system-ui,sans-serif;display:flex;justify-content:center;transition:background .3s}
-.app{width:100%;max-width:420px;height:100%;display:flex;flex-direction:column;padding:0 12px calc(12px + env(safe-area-inset-bottom,0px));gap:12px}
+html{width:100%;height:100%;margin:0;background:var(--bg);overscroll-behavior:none}
+body{position:fixed;inset:0;width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none;background:var(--bg);font-family:ui-rounded,"SF Pro Rounded","Nunito",system-ui,sans-serif;display:flex;justify-content:center;transition:background .3s}
+.app{width:100%;max-width:420px;height:100%;min-height:0;display:flex;flex-direction:column;padding:0 12px max(8px,env(safe-area-inset-bottom,0px));gap:12px}
+@supports(height:100dvh){html,body,.app{height:100dvh}}
 .left{flex:0 0 36%;display:flex;flex-direction:column;gap:12px;min-height:0}
 .screen{position:relative;flex:1;min-height:0;background:var(--screen);border-radius:0 0 32px 32px;margin:0 -12px;padding:calc(env(safe-area-inset-top,0px) + 64px) 30px 16px;color:var(--ink);display:flex;flex-direction:column;box-shadow:inset 0 -6px 14px #0006,0 4px 0 var(--keyd)}
 .fl{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;gap:10px;z-index:2}.fl.l{left:16px}.fl.r{right:16px}
@@ -99,9 +100,14 @@ function mk(host,k,c){const b=document.createElement('button');b.className='k '+
  ['pointerup','pointerleave','pointercancel'].forEach(e=>b.addEventListener(e,()=>b.classList.remove('pressed')));
  b.addEventListener('click',()=>press(k));host.appendChild(b)}
 keys.forEach(([k,c])=>mk(basic,k,c));sk.forEach((k,i)=>{const b=document.createElement('button');b.className='k';b.textContent=k;b.dataset.k=k;b.style.setProperty('--i',i);advg.appendChild(b)});
-const S=Object.assign({skin:'cream',sound:true,pack:'arcade',dynamic:true,vol:.7,haptics:true},(()=>{try{return JSON.parse(localStorage.getItem('cc_set'))||{}}catch(e){return{}}})());
+const S=Object.assign({skin:'cream',sound:true,silent:false,pack:'arcade',dynamic:true,vol:.7,haptics:true},(()=>{try{return JSON.parse(localStorage.getItem('cc_set'))||{}}catch(e){return{}}})());
 const persist=()=>{try{localStorage.setItem('cc_set',JSON.stringify(S))}catch(e){}};
 document.documentElement.dataset.skin=S.skin;
+const syncChrome=()=>{const c=getComputedStyle(document.documentElement),bg=c.getPropertyValue('--bg').trim(),screen=c.getPropertyValue('--screen').trim();document.documentElement.style.backgroundColor=bg;document.body.style.backgroundColor=bg;document.querySelector('meta[name="theme-color"]').content=screen||bg};
+syncChrome();
+const hasAudioSession=!!navigator.audioSession;
+const syncAudioSession=()=>{if(hasAudioSession){try{navigator.audioSession.type=S.silent?'playback':'auto'}catch(e){}}};
+syncAudioSession();
 const PK={arcade:{n:'Arcade',w:'square',d:.09,g:.06,bend:.6,pitch:1,arp:1},soft:{n:'Soft',w:'sine',d:.28,g:.16,bend:1,pitch:1,arp:1,h:2},marimba:{n:'Marimba',w:'sine',d:.35,g:.2,bend:.98,pitch:1,arp:1,h:4},bubble:{n:'Bubble',w:'sine',d:.13,g:.18,bend:1.9,pitch:1.4,arp:1},clicky:{n:'Clicky',w:'square',d:.04,g:.035,bend:.5,pitch:.5,click:1,freq:3500},typewriter:{n:'Typewriter',w:'triangle',d:.06,g:.07,bend:.7,pitch:.7,click:1.4,freq:1800,bell:1}};
 const SC=[0,2,4,7,9,12,14,16,19,21],OPN={'+':19,'−':3,'×':14,'÷':10,'^':17};let nb;
 const kindOf=k=>/^\d$/.test(k)?'digit':k==='.'?'dot':'+−×÷^'.includes(k)?'op':({'=':'eq','AC':'clear','⌫':'back','morph':'morph','err':'err'})[k]||'fn';
@@ -109,7 +115,7 @@ function tone(f,dur,o){const t=ac.currentTime+(o.delay||0),os=ac.createOscillato
 function clk(g,freq,dur){nb=nb||(()=>{const b=ac.createBuffer(1,ac.sampleRate*.05,ac.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;return b})();const s=ac.createBufferSource(),f=ac.createBiquadFilter(),gn=ac.createGain(),t=ac.currentTime;s.buffer=nb;f.type='bandpass';f.frequency.value=freq;gn.gain.setValueAtTime(Math.max(.0002,g*S.vol*3),t);gn.gain.exponentialRampToValueAtTime(.0008,t+dur);s.connect(f).connect(gn).connect(ac.destination);s.start(t);s.stop(t+dur)}
 function blip(k,idx){const kind=idx==='pick'?'pick':typeof idx==='number'?'tick':kindOf(k);
  if(S.haptics){try{navigator.vibrate&&navigator.vibrate(kind==='eq'?[10,40,12]:kind==='err'?[30,40,30]:8)}catch(e){}}
- if(!S.sound||S.vol<=0)return;
+ if(!S.sound||S.vol<=0)return;syncAudioSession();
  try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();
   const P=PK[S.pack]||PK.arcade,dy=S.dynamic,st=n=>261.63*Math.pow(2,n/12)*P.pitch,o={w:P.w,g:P.g,bend:P.bend,h:P.h},base=7;
   const T=(n,d,x)=>tone(st(n),d,Object.assign({},o,x||{}));
@@ -185,8 +191,9 @@ const chip=(txt,on,fn)=>{const b=mkEl('button','chip'+(on?' on':''),txt);b.oncli
 const sec=t=>sb.appendChild(mkEl('div','day',t)),rw=(l,el)=>{const d=mkEl('div','row');d.append(mkEl('span','',l),el);sb.appendChild(d)};
 const tg=key=>chip(S[key]?'On':'Off',S[key],()=>{S[key]=!S[key];persist();buildSet();blip(key==='haptics'?'=':'5')});
 function buildSet(){sb.innerHTML='';
- sec('Theme');const w=mkEl('div','sws');THEMES.forEach(([id,n,bg])=>{const b=mkEl('button','sw'+(S.skin===id?' on':''));b.style.background=bg;b.setAttribute('aria-label',n);b.onclick=()=>{S.skin=id;document.documentElement.dataset.skin=id;persist();buildSet()};w.appendChild(b)});sb.appendChild(w);
+ sec('Theme');const w=mkEl('div','sws');THEMES.forEach(([id,n,bg])=>{const b=mkEl('button','sw'+(S.skin===id?' on':''));b.style.background=bg;b.setAttribute('aria-label',n);b.onclick=()=>{S.skin=id;document.documentElement.dataset.skin=id;syncChrome();persist();buildSet()};w.appendChild(b)});sb.appendChild(w);
  sec('Sound');rw('Sound effects',tg('sound'));
+ if(hasAudioSession)rw('Play through Silent Mode',chip(S.silent?'On':'Off',S.silent,()=>{S.silent=!S.silent;syncAudioSession();persist();buildSet();blip('5')}));
  const r=mkEl('input');r.type='range';r.min=0;r.max=100;r.value=S.vol*100;r.oninput=()=>{S.vol=r.value/100;persist()};r.onchange=()=>blip('5');rw('Volume',r);
  rw('Keys sound different',tg('dynamic'));rw('Haptics',tg('haptics'));
  sec('Sound pack');const c=mkEl('div','chips');Object.entries(PK).forEach(([id,p])=>c.appendChild(chip(p.n,S.pack===id,()=>{S.pack=id;persist();buildSet();blip('3');setTimeout(()=>blip('7'),110);setTimeout(()=>blip('='),230)})));sb.appendChild(c);
