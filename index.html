@@ -17,10 +17,9 @@
 <link rel="icon" type="image/png" sizes="16x16" href="./assets/icons/favicon-16x16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
 <link rel="mask-icon" href="./assets/icons/safari-pinned-tab.svg" color="#ff7a3d">
-<script src="./themes.js?v=20"></script>
-<script src="./data.js?v=18"></script>
-<script src="./icons.js?v=18"></script>
-<script src="./features.js?v=18"></script>
+<script src="./themes.js?v=21"></script>
+<script src="./data.js?v=21"></script>
+<script src="./features.js?v=21"></script>
 <script src="./vendor/decimal.js"></script>
 <script src="./math.js?v=13"></script>
 <script>
@@ -106,9 +105,16 @@ html.standalone .app{--top-gap:44px;padding-bottom:12px;background:var(--bg)}
 .chip{border:0;border-radius:99px;padding:9px 15px;font-weight:700;font-size:14px;font-family:inherit;background:var(--panel);color:var(--keytx);cursor:pointer}
 .chip.on{background:var(--op);color:var(--optx)}
 .chips{display:flex;flex-wrap:wrap;gap:8px}.sws{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;padding:3px}
-.theme-option{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px;min-width:0}
-.sw{width:min(46px,100%);aspect-ratio:1;border-radius:50%;border:3px solid transparent;box-shadow:0 0 0 1px #0002;cursor:pointer;padding:0}
+.theme-option{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;min-width:0;text-align:center}
+.theme-option>span{width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sw{width:min(52px,100%);aspect-ratio:1;border-radius:14px;border:3px solid transparent;box-shadow:0 0 0 1px #0002;cursor:pointer;padding:0}
 .sw.on{border-color:var(--bg);box-shadow:0 0 0 3px var(--op)}
+.theme-library{grid-template-columns:repeat(5,minmax(0,1fr));align-items:start}
+.theme-tile-shell{position:relative;width:min(52px,100%);aspect-ratio:1}
+.theme-tile-shell .sw{width:100%}
+.theme-edit{position:absolute;right:-5px;bottom:-5px;width:23px;height:23px;border-radius:8px;border:2px solid #fff;background:#353540;color:#fff;font:700 13px/1 system-ui;padding:0;display:grid;place-items:center;cursor:pointer;box-shadow:0 2px 5px #0004}
+.theme-add{font:500 31px/1 system-ui;background:#e3e3e8!important;color:#353540!important;border:1px dashed #9898a5!important}
+.theme-choice-body{display:grid;gap:18px;padding:18px 2px 6px}.theme-choice-body p{margin:0;text-align:center;font-size:16px}.theme-choice-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}.theme-choice-actions .pill{min-height:52px;font-size:15px}
 input[type=range]{accent-color:var(--op);width:55%}
 #sbody{overflow-y:auto;min-height:0}#setsheet .panel{max-height:88%}
 .k.fn,.advg .k{color:var(--fntx)}.ib{color:var(--ibtx)}
@@ -133,8 +139,7 @@ input[type=range]{accent-color:var(--op);width:55%}
 .hex-input{-webkit-user-select:text;user-select:text}.hex-input[aria-invalid=true]{border-color:#b42318}
 .color-controls input[type=range]{width:100%;accent-color:#6554ad}.custom-presets{display:flex;flex-wrap:wrap;gap:6px}
 .custom-presets button{border:1px solid #c5c5cf;border-radius:20px;padding:7px 10px;font:inherit;font-size:12px;background:#fff;color:#242429;cursor:pointer}
-.theme-manager{display:grid;gap:8px;margin:14px 0}.theme-manager label{display:grid;gap:6px;font-size:14px;font-weight:650}
-.theme-manager select{font:inherit;font-size:16px;padding:12px;border-radius:12px;background:#fff;color:#242429;border:1px solid #bcbcc5;width:100%}
+.theme-manager{display:grid;gap:8px;margin:8px 0 14px}
 .theme-popup{z-index:20;top:0;bottom:auto;height:100%;padding-top:max(12px,env(safe-area-inset-top,0px));align-items:stretch}
 .theme-popup .panel{height:100%;min-height:0;max-height:none;background:#f5f5f7;color:#242429;border-radius:28px 28px 0 0}
 html.standalone .theme-popup{height:100vh}
@@ -174,10 +179,6 @@ html.standalone .theme-popup{height:100vh}
 .feature-body .pill{align-self:flex-start;font-size:14px;min-height:44px}.feature-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .feature-actions a{display:inline-flex;align-items:center;text-decoration:none}.feature-note{font-size:13px;line-height:1.45;color:inherit;opacity:.8}
 .feature-note:empty,.ai-preview:empty{display:none}.feature-note.theme-error{opacity:1;color:#a82020}
-.icon-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.icon-choice{border:2px solid transparent;background:#e9e9ee;color:#242429;padding:7px;border-radius:21px;cursor:pointer;display:grid;gap:8px;min-width:0;font:600 12px system-ui}
-.icon-choice img{width:100%;display:block;border-radius:20%;aspect-ratio:1}.icon-choice[aria-pressed=true]{border-color:#6554ad;background:#e1dcf6;box-shadow:0 0 0 1px #6554ad}
-.reinstall-guide{border-top:1px solid #d5d5de;padding-top:12px;display:grid;gap:12px}.reinstall-guide ol{margin:0;padding-left:24px;display:grid;gap:9px}
 .backup-verified{color:#286644}.ai-samples{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:12px 0}.ai-samples .mini-calc{margin:0}.ai-preview{background:#e9e9ee;padding:12px;border-radius:20px}
 .feature-body>button{flex-shrink:0}.feature-body select,.feature-body textarea{font-size:16px}
 @supports(height:100dvh){.theme-popup{height:100dvh}}
@@ -352,21 +353,18 @@ function showHist(){const L=$('hlist');L.innerHTML='';const items=hist.filter(h=
 $('hx').onclick=()=>$('sheet').classList.remove('on');
 $('sheet').onclick=e=>{if(e.target.id==='sheet')$('sheet').classList.remove('on')};
 $('hclr').onclick=()=>{hist=[];save();showHist();render()};
-const THEMES=[['cream','Cream','linear-gradient(135deg,#efe6d4 50%,#ff7a3d 50%)'],['night','Midnight','linear-gradient(135deg,#0e1020 50%,#7c5cff 50%)'],['black','Black','linear-gradient(135deg,#000 50%,#555 50%)'],['mint','Mint','linear-gradient(135deg,#d7efe4 50%,#17b377 50%)'],['white','White','linear-gradient(135deg,#ffffff 50%,#ff9500 50%)'],['custom','Custom','conic-gradient(#e9adbc,#e6d5ab,#b6d8c2,#b1cfe8,#c9bae3,#e9adbc)']];
 const sb=$('sbody'),mkEl=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e};
 const chip=(txt,on,fn)=>{const b=mkEl('button','chip'+(on?' on':''),txt);b.onclick=fn;return b};
 const sec=t=>sb.appendChild(mkEl('div','day',t)),rw=(l,el)=>{const d=mkEl('div','row');d.append(mkEl('span','',l),el);sb.appendChild(d)};
 const tg=key=>chip(S[key]?'On':'Off',S[key],()=>{S[key]=!S[key];persist();buildSet();blip('5')});
 function buildSet(){sb.innerHTML='';
- sec('Theme');const w=mkEl('div','sws');THEMES.filter(([id])=>id!=='custom').forEach(([id,n,bg])=>{const wrap=mkEl('div','theme-option'),b=mkEl('button','sw'+(S.skin===id?' on':''));b.style.background=bg;b.setAttribute('aria-label',n);b.setAttribute('aria-pressed',String(S.skin===id));b.onclick=()=>{S.skin=id;CalcThemes.apply(S);syncChrome();persist();buildSet()};wrap.append(b,mkEl('span','',n));w.appendChild(wrap)});sb.appendChild(w);
- CalcThemes.manager(sb,S,()=>{CalcThemes.apply(S);syncChrome();persist();buildSet()},{ai:CalcFeatures.openAI});
+ sec('Theme');CalcThemes.manager(sb,S,()=>{CalcThemes.apply(S);syncChrome();persist();buildSet()},{ai:CalcFeatures.openAI});
  sec('Sound');rw('Sound effects',tg('sound'));
  if(hasAudioSession)rw('Play through Silent Mode',chip(S.silent?'On':'Off',S.silent,()=>{S.silent=!S.silent;syncAudioSession();persist();buildSet();blip('5')}));
  const r=mkEl('input');r.type='range';r.min=0;r.max=100;r.value=S.vol*100;r.oninput=()=>{S.vol=r.value/100;persist()};r.onchange=()=>blip('5');rw('Volume',r);
  rw('Keys sound different',tg('dynamic'));
  sec('Sound pack');const c=mkEl('div','chips');Object.entries(PK).forEach(([id,p])=>c.appendChild(chip(p.n,S.pack===id,()=>{S.pack=id;persist();buildSet();blip('3');setTimeout(()=>blip('7'),110);setTimeout(()=>blip('='),230)})));sb.appendChild(c);
- sec('Backup & Custom App Icon');CalcFeatures.backupControls(sb);
- sec('AI themes');sb.appendChild(chip('AI Theme Generator',false,CalcFeatures.openAI));
+ sec('Backup');CalcFeatures.backupControls(sb);
  sec('History');rw('Past calculations',chip('View last 3 days',false,()=>{$('setsheet').classList.remove('on');showHist()}))}
 CalcFeatures.init(S,()=>{CalcThemes.apply(S);syncChrome();buildSet()});
 const openSettings=()=>{buildSet();$('setsheet').classList.add('on');$('sx').focus()};
