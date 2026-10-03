@@ -40,18 +40,25 @@ const CalcFeatures=(()=>{
    `Current palette as a complete valid example (change colors and name to satisfy my preferences):\n${JSON.stringify({format:'chunky-theme',version:1,name:'My new theme',theme:colors},null,2)}\n\n`+
    `You may briefly explain your design first. Finish with ONE clearly separated, copyable JSON code block containing the complete Chunky Theme object. Use valid JSON: no comments, no trailing commas, no JavaScript, no HTML, no executable code, no CSS declarations, no URLs, and no unsupported fields. Do not output multiple competing theme blocks. If clarification is needed first, ask before producing the final block.`;
  }
+ function copyPrompt(text){
+  const area=el('textarea','hex-input');area.value=text;area.readOnly=true;area.setAttribute('aria-hidden','true');area.style.cssText='position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none';document.body.append(area);area.focus();area.select();area.setSelectionRange(0,text.length);
+  let copied=false;try{copied=document.execCommand('copy')}catch(_){}
+  area.remove();if(copied)return Promise.resolve(true);
+  if(navigator.clipboard?.writeText)return navigator.clipboard.writeText(text).then(()=>true,()=>false);
+  return Promise.resolve(false);
+ }
  function openAI(onSaved){
   const view=popup('AI Theme Generator'),{body}=view,state={service:'chatgpt',preferences:'',importText:''},service=el('select','hex-input'),preferences=el('textarea','hex-input'),paste=el('textarea','hex-input theme-json'),message=live(el('p','feature-note')),importMessage=live(el('p','feature-note')),preview=el('div','ai-preview');
   SERVICES.forEach(s=>{const o=el('option','',s.name);o.value=s.id;service.append(o)});service.value=state.service;service.setAttribute('aria-label','AI Service');preferences.rows=4;preferences.maxLength=10000;preferences.placeholder='Dark aviation cockpit, with mostly blue and small orange accents…';preferences.value=state.preferences;preferences.setAttribute('aria-label','Describe the theme you want');
   paste.rows=6;paste.maxLength=100000;paste.spellcheck=false;paste.autocapitalize='off';paste.value=state.importText;paste.placeholder='Paste the Chunky Theme JSON here';paste.setAttribute('aria-label','Import AI Theme');
   paste.oninput=()=>{preview.replaceChildren();importMessage.textContent=''};
   const fallback=el('div'),go=button('Go to AI',async()=>{
-   const selected=SERVICES.find(s=>s.id===service.value),full=prompt(preferences.value);fallback.replaceChildren();
-   // Reserve a window during the user gesture. Never send user text through a URL.
-   const tab=window.open('about:blank','_blank');if(tab)tab.opener=null;
-   try{if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');await navigator.clipboard.writeText(full);status(message,'Theme prompt copied. Upload any inspiration, screenshot, logo or palette images directly in '+selected.name+', then paste the copied prompt.');if(tab)tab.location.replace(selected.url);else status(message,message.textContent+' Tap Open '+selected.name+' below if the new tab was blocked.')}
-   catch(_){if(tab)tab.close();status(message,'Automatic copying was blocked. Copy the prompt below, then open '+selected.name+'. Upload any inspiration or palette images there and paste your prompt.',true);const area=el('textarea','hex-input');area.rows=8;area.value=full;area.readOnly=true;area.setAttribute('aria-label','Generated theme prompt');fallback.replaceChildren(area);area.focus();area.select()}
-   const link=el('a','pill','Open '+selected.name);link.href=selected.url;link.target='_blank';link.rel='noopener noreferrer';fallback.append(link);
+   const selected=SERVICES.find(s=>s.id===service.value),full=prompt(preferences.value);fallback.replaceChildren();go.disabled=true;
+   const copyTask=copyPrompt(full),tab=window.open(selected.url,'_blank');if(tab)try{tab.opener=null}catch(_){}
+   const copied=await copyTask;
+   if(copied)status(message,'Theme prompt copied. Paste it into '+selected.name+', and attach any inspiration images there.');
+   else{status(message,'The AI opened, but iOS blocked automatic copying. Copy the prompt below.',true);const area=el('textarea','hex-input');area.rows=8;area.value=full;area.readOnly=true;area.setAttribute('aria-label','Generated theme prompt');fallback.append(area);area.focus();area.select()}
+   if(!tab)location.assign(selected.url);else go.disabled=false;
   });
   const previewButton=button('Preview Theme',()=>{
    preview.replaceChildren();try{const theme=CalcThemes.parseTheme(paste.value);status(importMessage,'Valid theme. Preview it before saving.');
