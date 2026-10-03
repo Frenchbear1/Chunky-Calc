@@ -23,9 +23,42 @@ const CalcThemes=(()=>{
   return /^#[0-9a-f]{6}$/i.test(v)?v.toLowerCase():null;
  }
  const palette=p=>Object.fromEntries([...fields.map(([k])=>[k,color(p&&p[k])||defaults[k]]),...specifics.filter(x=>color(p&&p[x.id])).map(x=>[x.id,color(p[x.id])])]);
- function timeline(read,write){const steps=[];return {get length(){return steps.length},push(){const snapshot=JSON.stringify(read());if(steps.at(-1)!==snapshot)steps.push(snapshot)},undo(){if(steps.length)write(JSON.parse(steps.pop()))}}}
+ function timeline(read,write){const steps=[];return {get length(){return steps.length},clear(){steps.length=0},push(){const snapshot=JSON.stringify(read());if(steps.at(-1)!==snapshot)steps.push(snapshot)},undo(){if(steps.length)write(JSON.parse(steps.pop()))}}}
+ // One definition source for the editor, AI contract, saved themes and backups.
+ const builtins=['cream','night','black','white','mint'];
+ const properties=Object.fromEntries([...fields.map(([id,label])=>[id,{label,type:'color',required:true}]),...specifics.map(x=>[x.id,{label:x.name,type:'color',required:false,inherits:x.base}])]);
+ function record(value,label){if(!value||typeof value!=='object'||Array.isArray(value))throw Error(label+' must be a JSON object.');return value}
+ function safeTree(value,depth=0){
+  if(depth>20)throw Error('This file is nested too deeply.');
+  if(value&&typeof value==='object')for(const key of Object.keys(value)){if(['__proto__','constructor','prototype'].includes(key))throw Error('Unsafe property: '+key);safeTree(value[key],depth+1)}
+ }
+ function only(value,keys,label){record(value,label);for(const key of Object.keys(value))if(!keys.includes(key))throw Error(label+': unsupported property “'+key+'”.')}
+ function validatePalette(value,complete=true){
+  record(value,'Theme');safeTree(value);const out={};
+  for(const [key,v] of Object.entries(value)){if(!Object.hasOwn(properties,key))throw Error('Unsupported theme property: '+key);if(typeof v!=='string'||!/^#[0-9a-f]{6}$/i.test(v))throw Error(properties[key].label+' needs a six-digit hex color, such as #123ABC.');out[key]=v.toLowerCase()}
+  if(complete)for(const [key,def] of Object.entries(properties))if(def.required&&!Object.hasOwn(out,key))throw Error('Missing '+def.label+' ('+key+').');
+  return out;
+ }
+ function themeBlock(value){
+  safeTree(value);only(value,['format','version','name','theme'],'Theme block');
+  if(value.format!=='chunky-theme')throw Error('Expected a Chunky Theme JSON block.');
+  if(value.version!==1)throw Error('Theme version '+value.version+' is not supported. This app supports version 1.');
+  if(typeof value.name!=='string'||!value.name.trim()||value.name.length>40||/[<>\x00-\x1f]/.test(value.name))throw Error('Use a plain theme name between 1 and 40 characters.');
+  return {format:'chunky-theme',version:1,name:value.name.trim(),theme:validatePalette(value.theme)};
+ }
+ function parseTheme(text){
+  if(typeof text!=='string'||text.length>100000)throw Error('Paste one theme JSON block under 100 KB.');
+  text=text.trim();const fenced=text.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);if(fenced)text=fenced[1];
+  let value;try{value=JSON.parse(text)}catch(_){throw Error('That is not valid JSON. Copy only the final Chunky Theme block.')}return themeBlock(value);
+ }
+ function deleteTheme(s,id){
+  if(builtins.includes(id)||!s.customThemes.some(t=>t.id===id))throw Error('Only saved custom themes can be deleted.');
+  const next={...s,customThemes:s.customThemes.filter(t=>t.id!==id)};
+  if(s.customThemeId===id){next.skin='cream';delete next.customThemeId;delete next.custom}
+  return next;
+ }
+ function deleteElement(p,id){if(!specific(id)||!Object.hasOwn(p,id))throw Error('This part has no custom override.');const next={...p};delete next[id];return next}
  function restore(s){
-  delete s.themeColors;
   s.customThemes=(Array.isArray(s.customThemes)?s.customThemes:[]).filter(t=>t&&typeof t.id==='string'&&typeof t.name==='string').map(t=>({id:t.id,name:t.name.slice(0,40),colors:palette(t.colors)}));
   if(!s.customThemes.length&&s.custom){const t={id:'legacy-custom',name:'My theme',colors:palette(s.custom)};s.customThemes.push(t);if(s.skin==='custom')s.customThemeId=t.id}
   const active=s.customThemes.find(t=>t.id===s.customThemeId);
@@ -95,14 +128,14 @@ const CalcThemes=(()=>{
   modal.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape'){e.preventDefault();close()}const d={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down'}[e.key];if(d){e.preventDefault();move(d)}if(e.key==='Tab'){const buttons=[...panel.querySelectorAll('button')];if(e.shiftKey&&document.activeElement===buttons[0]){e.preventDefault();buttons.at(-1).focus()}else if(!e.shiftKey&&document.activeElement===buttons.at(-1)){e.preventDefault();buttons[0].focus()}}});
   draw();cancel.focus();
  }
- function editor(host,s,onChange,beforeChange=()=>{}){
+ function editor(host,s,onChange,beforeChange=()=>{},hooks={}){
   const el=element,box=el('section','custom-editor');box.setAttribute('aria-label','Custom theme editor');
   const preview=el('div','mini-preview');box.append(preview,el('p','','Pick a soft palette, adjust a group, or choose one specific part. Save when you’re happy with it.'));
   const presetsRow=el('div','custom-presets');
-  presets.forEach(([name,p])=>{const b=el('button','',name);b.type='button';b.onclick=()=>{finish();beforeChange();s.custom={...p};commit();sync()};presetsRow.append(b)});box.append(presetsRow);
+  presets.forEach(([name,p])=>{const b=el('button','',name);b.type='button';b.onclick=()=>{finish();beforeChange();s.custom={...p};commit();sync()};presetsRow.append(b)});const ai=el('button','','AI');ai.type='button';ai.onclick=()=>hooks.ai?hooks.ai():document.dispatchEvent(new CustomEvent('chunky-open-ai'));presetsRow.append(ai);box.append(presetsRow);
   const controls=el('div','color-controls'),part=el('select');part.setAttribute('aria-label','Calculator element');
   const label=(name,input)=>{const l=el('label','',name);l.append(input);return l};
-  controls.append(label('Choose a part',part));
+  const selectRow=el('div','part-select-row'),selectPart=el('button','pill','Select');selectPart.type='button';selectPart.setAttribute('aria-label','Select a specific element');selectRow.append(part,selectPart);controls.append(label('Choose a part',selectRow));
   const reuse=el('div','reuse-colors'),individual=el('div','reuse-colors individual-colors'),individualLabel=el('p','','Individual parts');reuse.setAttribute('aria-label','Reusable element colors');individual.setAttribute('aria-label','Reusable individual colors');controls.append(el('p','','Reuse a color · one per element'),reuse,individualLabel,individual);
   const swatches=[];
   function swatch(key,name,host){const b=el('button','color-swatch');b.type='button';b.dataset.element=key;b.onclick=()=>{finish();update(valueFor(palette(s.custom),key));finish()};host.append(b);swatches.push({key,name,b})}
@@ -116,23 +149,24 @@ const CalcThemes=(()=>{
   function options(){
    const extras=specifics.filter(x=>s.custom[x.id]);part.replaceChildren();
    const option=(value,name)=>{const o=el('option','',name);o.value=value;part.append(o)};
-   option('__pick','⌖ Pick a specific part…');fields.forEach(([key,name])=>option(key,name));extras.forEach(x=>option(x.id,x.name));
+   fields.forEach(([key,name])=>option(key,name));extras.forEach(x=>option(x.id,x.name));
    if(specific(active)&&!s.custom[active])active=specific(active).base;part.value=active;
    individual.replaceChildren();swatches.splice(fields.length);extras.forEach(x=>swatch(x.id,x.name,individual));individual.hidden=individualLabel.hidden=!extras.length;
   }
   function paintSwatches(){swatches.forEach(({key,name,b})=>{const v=valueFor(s.custom,key);b.style.background=v;b.title=name+': '+v;b.setAttribute('aria-label','Use '+name+' color '+v);b.setAttribute('aria-current',String(key===active))})}
-  function commit(){s.custom=palette(s.custom);options();preview.replaceChildren(sample(s.custom,specific(active)?.target.mode||0));paintSwatches();onChange()}
+  function commit(){s.custom=palette(s.custom);options();preview.replaceChildren(sample(s.custom,specific(active)?.target.mode||0));paintSwatches();onChange();if(hooks.selection)hooks.selection(active,Object.hasOwn(s.custom,active)&&!!specific(active))}
   function sync(){const v=valueFor(palette(s.custom),active);part.value=active;picker.value=v;hex.value=v;hex.removeAttribute('aria-invalid');paintSwatches();toHsl(v).forEach((n,i)=>ranges[i].value=n)}
   function update(v,sliders=false,preserveHex=false){if(valueFor(s.custom,active)===v)return;if(!editing){beforeChange();editing=true}s.custom={...palette(s.custom),[active]:v};commit();picker.value=v;if(!preserveHex)hex.value=v;hex.removeAttribute('aria-invalid');if(!sliders)toHsl(v).forEach((n,i)=>ranges[i].value=n)}
-  part.onchange=()=>{finish();if(part.value==='__pick'){part.value=active;pickElement(palette(s.custom),active,id=>{if(!s.custom[id]){beforeChange();s.custom[id]=valueFor(s.custom,id)}active=id;commit();sync()});return}active=part.value;preview.replaceChildren(sample(s.custom,specific(active)?.target.mode||0));sync()};
+  selectPart.onclick=()=>{finish();part.blur?.();pickElement(palette(s.custom),active,id=>{if(!s.custom[id]){beforeChange();s.custom[id]=valueFor(s.custom,id)}active=id;commit();sync()})};
+  part.onchange=()=>{finish();active=part.value;preview.replaceChildren(sample(s.custom,specific(active)?.target.mode||0));sync();if(hooks.selection)hooks.selection(active,Object.hasOwn(s.custom,active)&&!!specific(active))};
   picker.oninput=()=>update(picker.value);picker.onchange=finish;picker.onblur=finish;
   hex.oninput=()=>{const v=color(hex.value);if(v){update(v,false,true);hint.textContent='Preview updated.'}else{hex.setAttribute('aria-invalid','true');hint.textContent='Enter a hex color, such as #D8C5E8.'}};
   hex.onchange=()=>{const v=color(hex.value);if(v)hex.value=v;finish()};hex.onblur=finish;
   ranges.forEach(r=>{r.oninput=()=>update(fromHsl(...ranges.map(x=>+x.value)),true);r.onchange=finish;r.onblur=finish});
   commit();sync();
-  return {refresh(){finish();commit();sync()}};
+  return {get active(){return active},refresh(){finish();commit();sync()}};
  }
- function manager(host,s,onChange){
+ function manager(host,s,onChange,services={}){
   const el=(tag,text)=>{const e=document.createElement(tag);if(text)e.textContent=text;return e};
   const wrap=el('div');wrap.className='theme-manager';const label=el('label','Custom themes'),select=el('select');select.setAttribute('aria-label','Custom themes');
   const option=(value,name)=>{const o=el('option',name);o.value=value;select.append(o)};
@@ -152,12 +186,22 @@ const CalcThemes=(()=>{
    const history=timeline(()=>({name:previousName,colors:palette(draft.custom)}),state=>{name.value=previousName=state.name;draft.custom=state.colors;editing.refresh()});
    const checkpoint=()=>{history.push();undo.disabled=!history.length};
    name.oninput=()=>{checkpoint();previousName=name.value};undo.onclick=()=>{history.undo();undo.disabled=!history.length};
-   const error=el('p');error.className='theme-error';error.setAttribute('role','alert');body.append(error);editing=editor(body,draft,()=>{},checkpoint);panel.append(header,body);modal.append(panel);document.body.append(modal);
+   const error=el('p');error.className='theme-error';error.setAttribute('role','alert');body.append(error);
+   const footer=el('div');footer.className='theme-delete-row';const removeTheme=el('button','Delete Theme'),removePart=el('button','Delete Element');
+   for(const b of [removeTheme,removePart]){b.type='button';b.className='delete-outline'}
+   removeTheme.hidden=!existing||builtins.includes(existing.id);removePart.hidden=true;footer.append(removeTheme,removePart);
+   editing=editor(body,draft,()=>{},checkpoint,{ai:()=>services.ai?.(()=>close()),selection:(id,custom)=>{removePart.hidden=!custom}});panel.append(header,body,footer);modal.append(panel);document.body.append(modal);
+   removeTheme.onclick=()=>{if(!existing||!confirm('Permanently delete “'+existing.name+'”? This cannot be undone.'))return;try{const next=deleteTheme(s,existing.id);CalcData.write('settings',next);for(const k of Object.keys(s))delete s[k];Object.assign(s,next);history.clear();close();onChange()}catch(err){error.textContent=err.message}};
+   removePart.onclick=()=>{const id=editing.active;if(!specific(id)||!Object.hasOwn(draft.custom,id)||!confirm('Delete the custom styling for '+specific(id).name+'? Its normal theme color will return. This cannot be undone.'))return;
+    try{const colors=deleteElement(draft.custom,id);if(existing){const next={...s,customThemes:s.customThemes.map(t=>t.id===existing.id?{...t,colors:Object.hasOwn(t.colors,id)?deleteElement(t.colors,id):t.colors}:t)};if(s.customThemeId===existing.id&&s.custom&&Object.hasOwn(s.custom,id))next.custom=deleteElement(s.custom,id);CalcData.write('settings',next);Object.assign(s,next);onChange()}
+     draft.custom=colors;history.clear();undo.disabled=true;editing.refresh();error.textContent='Custom element styling deleted.';
+    }catch(err){error.textContent=err.message}
+   };
    const close=()=>{modal.remove();if(focused&&focused.isConnected)focused.focus()};cancel.onclick=close;
-   panel.onsubmit=e=>{e.preventDefault();try{const next=savedSettings(s,existing&&existing.id,name.value,draft.custom);localStorage.setItem('cc_set',JSON.stringify(next));Object.assign(s,next);close();onChange()}catch(err){error.textContent=err.message||'Could not save this theme on your device.';name.focus()}};
-   modal.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape'){e.preventDefault();close()}if(e.key==='Tab'){const items=[...panel.querySelectorAll('button,input,select')].filter(x=>!x.disabled),first=items[0],last=items.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
+   panel.onsubmit=e=>{e.preventDefault();try{const next=savedSettings(s,existing&&existing.id,name.value,draft.custom);CalcData.write('settings',next);Object.assign(s,next);close();onChange()}catch(err){error.textContent=err.message||'Could not save this theme on your device.';name.focus()}};
+   modal.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape'){e.preventDefault();close()}if(e.key==='Tab'){const items=[...panel.querySelectorAll('button,input,select')].filter(x=>!x.disabled&&!x.hidden),first=items[0],last=items.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
    cancel.focus();
   }
  }
- return {fields,specifics,palette,valueFor,nearest,timeline,apply,snapshot,color,toHsl,fromHsl,presets,editor,restore,savedSettings,manager};
+ return {builtins,properties,record,safeTree,only,validatePalette,themeBlock,parseTheme,deleteTheme,deleteElement,sample,fields,specifics,palette,valueFor,nearest,timeline,apply,snapshot,color,toHsl,fromHsl,presets,editor,restore,savedSettings,manager};
 })();

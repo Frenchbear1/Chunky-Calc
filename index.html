@@ -17,7 +17,10 @@
 <link rel="icon" type="image/png" sizes="16x16" href="./assets/icons/favicon-16x16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
 <link rel="mask-icon" href="./assets/icons/safari-pinned-tab.svg" color="#ff7a3d">
-<script src="./themes.js?v=17"></script>
+<script src="./themes.js?v=18"></script>
+<script src="./data.js?v=18"></script>
+<script src="./icons.js?v=18"></script>
+<script src="./features.js?v=18"></script>
 <script src="./vendor/decimal.js"></script>
 <script src="./math.js?v=13"></script>
 <script>
@@ -154,6 +157,31 @@ html.standalone .theme-popup{height:100vh}
 .pick-footer{flex:none;display:grid;gap:8px;padding-top:6px;border-top:1px solid #d5d5de}.pick-name{text-align:center;font-size:14px;font-weight:700}
 .pick-modes,.pick-parts,.pick-arrows{display:flex;justify-content:center;gap:8px}.pick-arrows button{min-width:48px;min-height:44px;font-size:20px}
 .pick-hint{font-size:13px;margin:0;text-align:center}.pick-parts [aria-pressed=true],.pick-modes [aria-pressed=true]{background:#6554ad;color:white}
+
+/* New tools use the editor's existing neutral surfaces and rounded controls. */
+[hidden]{display:none!important}
+.part-select-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.part-select-row .pill{font-size:14px;min-height:44px}
+.theme-delete-row{display:flex;gap:10px;flex:none}
+.theme-delete-row:has(button:not([hidden])){padding-top:8px;border-top:1px solid #d5d5de}
+.delete-outline{flex:1;background:transparent!important;color:#b23a42!important;border:1px solid #c6656b;border-radius:14px;padding:12px;font-family:inherit;font-size:14px;font-weight:650;cursor:pointer;min-height:44px}
+.feature-popup{z-index:40}.feature-body{display:flex;flex-direction:column;gap:14px;overscroll-behavior:contain;padding:3px 1px 8px}
+.feature-body p,.feature-body li{font-size:14px;line-height:1.5}.feature-body h3{font-size:17px;margin:8px 0 0}.feature-body p{margin:0}
+.feature-body hr{width:100%;border:0;border-top:1px solid #d5d5de;margin:8px 0}
+.feature-label{display:grid;gap:7px;font-size:14px;font-weight:650}
+.feature-body textarea{resize:vertical;min-height:110px;line-height:1.4;-webkit-touch-callout:default}
+.feature-body textarea::selection,.hex-input::selection{background:#b7b0e5}
+.feature-body .pill{align-self:flex-start;font-size:14px;min-height:44px}.feature-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.feature-actions a{display:inline-flex;align-items:center;text-decoration:none}.feature-note{font-size:13px;line-height:1.45;color:inherit;opacity:.8}
+.feature-note:empty,.ai-preview:empty{display:none}.feature-note.theme-error{opacity:1;color:#a82020}
+.icon-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.icon-choice{border:2px solid transparent;background:#e9e9ee;color:#242429;padding:7px;border-radius:21px;cursor:pointer;display:grid;gap:8px;min-width:0;font:600 12px system-ui}
+.icon-choice img{width:100%;display:block;border-radius:20%;aspect-ratio:1}.icon-choice[aria-pressed=true]{border-color:#6554ad;background:#e1dcf6;box-shadow:0 0 0 1px #6554ad}
+.reinstall-guide{border-top:1px solid #d5d5de;padding-top:12px;display:grid;gap:12px}.reinstall-guide ol{margin:0;padding-left:24px;display:grid;gap:9px}
+.backup-verified{color:#286644}.ai-samples{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:12px 0}.ai-samples .mini-calc{margin:0}.ai-preview{background:#e9e9ee;padding:12px;border-radius:20px}
+.feature-body>button{flex-shrink:0}.feature-body select,.feature-body textarea{font-size:16px}
+@supports(height:100dvh){.theme-popup{height:100dvh}}
+@media(max-width:350px){.icon-grid{gap:6px}.feature-popup .panel{padding-left:12px;padding-right:12px}.ph{gap:5px}.theme-popup .ph b{font-size:15px}}
 </style></head><body>
 <div class="app">
  <div class="left">
@@ -207,8 +235,7 @@ function mk(host,k,c){const b=document.createElement('button');b.className='k '+
  b.addEventListener('click',e=>{const skip=cancelled&&e.detail!==0;cancelled=false;if((consumeHold&&consumeHold())||skip){e.preventDefault();return}blip(k);press(k)});host.appendChild(b)}
 keys.forEach(([k,c])=>mk(basic,k,c));sk.forEach((k,i)=>{const b=document.createElement('button');b.className='k';b.textContent=k;b.dataset.k=k;b.style.setProperty('--i',i);advg.appendChild(b)});
 const S=Object.assign({skin:'cream',sound:true,silent:false,pack:'arcade',dynamic:true,vol:.7},(()=>{try{return JSON.parse(localStorage.getItem('cc_set'))||{}}catch(e){return{}}})());
-delete S.haptics;
-const persist=()=>{try{localStorage.setItem('cc_set',JSON.stringify(S))}catch(e){}};
+const persist=()=>{try{CalcData.write('settings',S)}catch(e){$('status').textContent='Settings could not be saved. '+e.message}};
 CalcThemes.restore(S);persist();
 CalcThemes.apply(S);
 const syncChrome=()=>{const bg=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();document.documentElement.style.backgroundColor=bg;document.body.style.backgroundColor=bg;document.querySelector('meta[name="theme-color"]').content=bg};
@@ -305,7 +332,7 @@ function press(k){const last=expr.slice(-1);
  if(k!=='.'&&c==='0')expr=expr.slice(0,-1);
  expr+=k;render()}
 function shake(){blip('err');const m=$('main');m.classList.remove('shake');void m.offsetWidth;m.classList.add('shake')}
-function save(){try{localStorage.setItem('cc_hist',JSON.stringify(hist.filter(h=>h.t>Date.now()-2592e5)))}catch(e){}}
+function save(){try{CalcData.write('history',hist.filter(h=>h.t>Date.now()-2592e5))}catch(e){$('status').textContent='History could not be saved. '+e.message}}
 function render(pop){let v='0';$('expr').textContent=after?fmtE(lastE)+' =':fmtE(expr);
  if(after)v=fmt(expr.replace('−','-'));
  else if(expr){if(/^−?[\d.]*$/.test(expr))v=fmt(expr.replace('−','-'))||'0';else{const p=prev(expr);v=p===null?(fmt(expr.split(/[+−×÷^(]/).pop())||'0'):fmt(p)}}
@@ -313,13 +340,13 @@ function render(pop){let v='0';$('expr').textContent=after?fmtE(lastE)+' =':fmtE
  m.textContent=v;m.style.fontSize=Math.max(18,Math.min(76,520/Math.max(1,v.length)))+'px';
  advg.querySelector('[data-k="Deg"]').textContent=deg?'Deg':'Rad';
  if(pop){m.classList.add('pop');setTimeout(()=>m.classList.remove('pop'),120)}
- const t=$('tape');t.innerHTML='';hist.slice(-30).forEach(h=>{const d=document.createElement('div');d.innerHTML=fmtE(h.e)+' = <b>'+fmt(h.r)+'</b>';d.onclick=()=>{expr=neg(h.r);after=false;render()};t.appendChild(d)});t.scrollTop=t.scrollHeight}
+ const t=$('tape');t.innerHTML='';hist.slice(-30).forEach(h=>{const d=document.createElement('div');d.append(document.createTextNode(fmtE(h.e)+' = '));const answer=document.createElement('b');answer.textContent=fmt(h.r);d.append(answer);d.onclick=()=>{expr=neg(h.r);after=false;render()};t.appendChild(d)});t.scrollTop=t.scrollHeight}
 function showHist(){const L=$('hlist');L.innerHTML='';const items=hist.filter(h=>h.t>Date.now()-2592e5).slice().reverse();
  if(!items.length){L.innerHTML='<div class="day">Nothing yet — go do some math!</div>'}
  let cur='';items.forEach(h=>{const d=new Date(h.t),ds=d.toDateString(),td=new Date().toDateString(),yd=new Date(Date.now()-864e5).toDateString();
   const lab=ds===td?'Today':ds===yd?'Yesterday':d.toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'});
   if(lab!==cur){cur=lab;const g=document.createElement('div');g.className='day';g.textContent=lab;L.appendChild(g)}
-  const el=document.createElement('div');el.className='it';el.innerHTML='<span>'+fmtE(h.e)+' =</span><b>'+fmt(h.r)+'</b>';
+  const el=document.createElement('div');el.className='it';const line=document.createElement('span'),answer=document.createElement('b');line.textContent=fmtE(h.e)+' =';answer.textContent=fmt(h.r);el.append(line,answer);
   el.onclick=()=>{expr=neg(h.r);after=false;$('sheet').classList.remove('on');render()};L.appendChild(el)});
  $('sheet').classList.add('on')}
 $('hx').onclick=()=>$('sheet').classList.remove('on');
@@ -332,13 +359,16 @@ const sec=t=>sb.appendChild(mkEl('div','day',t)),rw=(l,el)=>{const d=mkEl('div',
 const tg=key=>chip(S[key]?'On':'Off',S[key],()=>{S[key]=!S[key];persist();buildSet();blip('5')});
 function buildSet(){sb.innerHTML='';
  sec('Theme');const w=mkEl('div','sws');THEMES.filter(([id])=>id!=='custom').forEach(([id,n,bg])=>{const wrap=mkEl('div','theme-option'),b=mkEl('button','sw'+(S.skin===id?' on':''));b.style.background=bg;b.setAttribute('aria-label',n);b.setAttribute('aria-pressed',String(S.skin===id));b.onclick=()=>{S.skin=id;CalcThemes.apply(S);syncChrome();persist();buildSet()};wrap.append(b,mkEl('span','',n));w.appendChild(wrap)});sb.appendChild(w);
- CalcThemes.manager(sb,S,()=>{CalcThemes.apply(S);syncChrome();persist();buildSet()});
+ CalcThemes.manager(sb,S,()=>{CalcThemes.apply(S);syncChrome();persist();buildSet()},{ai:CalcFeatures.openAI});
  sec('Sound');rw('Sound effects',tg('sound'));
  if(hasAudioSession)rw('Play through Silent Mode',chip(S.silent?'On':'Off',S.silent,()=>{S.silent=!S.silent;syncAudioSession();persist();buildSet();blip('5')}));
  const r=mkEl('input');r.type='range';r.min=0;r.max=100;r.value=S.vol*100;r.oninput=()=>{S.vol=r.value/100;persist()};r.onchange=()=>blip('5');rw('Volume',r);
  rw('Keys sound different',tg('dynamic'));
  sec('Sound pack');const c=mkEl('div','chips');Object.entries(PK).forEach(([id,p])=>c.appendChild(chip(p.n,S.pack===id,()=>{S.pack=id;persist();buildSet();blip('3');setTimeout(()=>blip('7'),110);setTimeout(()=>blip('='),230)})));sb.appendChild(c);
+ sec('Backup & Custom App Icon');CalcFeatures.backupControls(sb);
+ sec('AI themes');sb.appendChild(chip('AI Theme Generator',false,CalcFeatures.openAI));
  sec('History');rw('Past calculations',chip('View last 3 days',false,()=>{$('setsheet').classList.remove('on');showHist()}))}
+CalcFeatures.init(S,()=>{CalcThemes.apply(S);syncChrome();buildSet()});
 const openSettings=()=>{buildSet();$('setsheet').classList.add('on');$('sx').focus()};
 $('gear').onclick=openSettings;
 const closeSettings=()=>{$('setsheet').classList.remove('on');$('fx').focus()};
@@ -360,7 +390,7 @@ fx.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('selectstart',e=>{if(!e.target.closest('input,textarea'))e.preventDefault()});
 document.addEventListener('contextmenu',e=>{if(!e.target.closest('input,textarea'))e.preventDefault()});
 document.addEventListener('touchmove',e=>{if(holding)e.preventDefault()},{passive:false});
-addEventListener('keydown',e=>{if(e.target.closest('input,select,textarea,[contenteditable=true]')||e.target.closest('button')&&['Enter',' '].includes(e.key))return;const m={'*':'×','/':'÷','-':'−','Enter':'=','Backspace':'⌫','Escape':'AC'};const k=m[e.key]||e.key;
+addEventListener('keydown',e=>{if(document.querySelector('.theme-popup')||e.target.closest('input,select,textarea,[contenteditable=true]')||e.target.closest('button')&&['Enter',' '].includes(e.key))return;const m={'*':'×','/':'÷','-':'−','Enter':'=','Backspace':'⌫','Escape':'AC'};const k=m[e.key]||e.key;
  if(/^[\d.+%=^()!]$/.test(k)||'×÷−⌫'.includes(k)||k==='AC'){e.preventDefault();const b=document.querySelector('[data-k="'+k+'"]');if(b){b.classList.add('pressed');setTimeout(()=>b.classList.remove('pressed'),90)}blip(k);press(k)}});
 addEventListener('resize',()=>render());
 render();

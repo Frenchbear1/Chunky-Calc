@@ -54,7 +54,7 @@ test('each element keeps one live reusable swatch, including matching colors',()
 test('visual selection adds one individual swatch, edits its color and undoes the session',()=>{
  const nodes=fakeDOM(),draft={custom:T.palette({key:'#abcdef'})},snapshots=[];
  const ed=T.editor({append(){}},draft,()=>{},()=>snapshots.push(JSON.stringify(draft.custom)));
- const part=nodes.find(n=>n.attributes['aria-label']==='Calculator element');part.value='__pick';part.onchange();
+ const part=nodes.find(n=>n.attributes['aria-label']==='Calculator element');nodes.find(n=>n.attributes['aria-label']==='Select a specific element').onclick();
  const calc=nodes.find(n=>n.className==='mini-calc pick-calc'),key=calc.querySelectorAll().find(n=>n.dataset.target==='b4');calc.onclick({target:{closest:()=>key}});
  nodes.find(n=>n.textContent==='Confirm').onclick();
  assert.equal(draft.custom.part_b4_fill,'#abcdef');assert.equal(part.value,'part_b4_fill');

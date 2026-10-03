@@ -1,8 +1,11 @@
-const CACHE_NAME = 'chunky-calc-v17';
+const CACHE_NAME = 'chunky-calc-v18';
 const APP_SHELL = [
   './',
   './index.html',
-  './themes.js?v=17',
+  './themes.js?v=18',
+  './data.js?v=18',
+  './icons.js?v=18',
+  './features.js?v=18',
   './math.js?v=13',
   './vendor/decimal.js',
   './manifest.webmanifest',
@@ -26,13 +29,20 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))))
+      .then(keys => Promise.all(keys.filter(key => /^chunky-calc-v\d+$/.test(key) && key !== CACHE_NAME).map(key => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+
+  const url = new URL(event.request.url);
+  // Generated icons exist only in this browser. Never send these requests to a server.
+  if (url.origin === self.location.origin && url.pathname.startsWith(new URL('./local-icon/', self.registration.scope).pathname)) {
+    event.respondWith(caches.open('chunky-calc-user-icons-v1').then(cache => cache.match(event.request)).then(found => found || new Response('Local icon unavailable', {status:404})));
+    return;
+  }
 
   if (event.request.mode === 'navigate') {
     event.respondWith(
