@@ -193,16 +193,20 @@ const CalcThemes=(()=>{
    ...s.customThemes.map(t=>({...t,builtin:false}))
   ];
   const colorGrid=colors=>{
-   const counts={};Object.values(palette(colors)).forEach(v=>{if(color(v))counts[v]=(counts[v]||0)+1});
-   const list=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([v])=>v);while(list.length<4)list.push(list.at(-1)||'#888888');
-   return 'conic-gradient('+list.map((v,i)=>v+' '+i*25+'% '+(i+1)*25+'%').join(',')+')';
+   const counts={};Object.values(palette(colors)).forEach(v=>{const normalized=color(v);if(normalized)counts[normalized]=(counts[normalized]||0)+1});
+   const list=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,9);if(!list.length)return '#888888';
+   const total=list.reduce((sum,[,uses])=>sum+uses,0),stops=[];let position=0;
+   list.forEach(([shade,uses],index)=>{
+    const end=position+uses/total*100,next=list[(index+1)%list.length][0],blend=Math.min(2.8,(end-position)*.28);
+    stops.push(shade+' '+position.toFixed(2)+'%',shade+' '+Math.max(position,end-blend).toFixed(2)+'%',next+' '+end.toFixed(2)+'%');position=end;
+   });
+   return 'conic-gradient(from -18deg,'+stops.join(',')+')';
   };
   const selectTheme=t=>{if(t.builtin){s.skin=t.id;delete s.customThemeId;delete s.custom}else{s.skin='custom';s.customThemeId=t.id;s.custom={...t.colors}}onChange()};
   themes.forEach(t=>{
-   const item=el('div');item.className='theme-option';const shell=el('div');shell.className='theme-tile-shell';
-   const swatch=el('button');swatch.type='button';swatch.className='sw theme-square'+(activeId===t.id?' on':'');swatch.style.background=colorGrid(t.colors);swatch.setAttribute('aria-label','Use '+t.name);swatch.setAttribute('aria-pressed',String(activeId===t.id));swatch.onclick=()=>selectTheme(t);
-   const edit=el('button','✎');edit.type='button';edit.className='theme-edit';edit.setAttribute('aria-label','Edit '+t.name);edit.onclick=e=>{e.stopPropagation();open(t)};
-   shell.append(swatch,edit);item.append(shell,el('span',t.name));grid.append(item);
+   const item=el('div');item.className='theme-option';const selected=activeId===t.id;
+   const swatch=el('button');swatch.type='button';swatch.className='sw theme-square'+(selected?' on':'');swatch.style.background=colorGrid(t.colors);swatch.setAttribute('aria-label',(selected?'Edit ':'Use ')+t.name);swatch.setAttribute('aria-pressed',String(selected));swatch.onclick=()=>selected?open(t):selectTheme(t);
+   item.append(swatch,el('span',t.name));grid.append(item);
   });
   const addItem=el('div');addItem.className='theme-option';const add=el('button','+');add.type='button';add.className='sw theme-square theme-add';add.setAttribute('aria-label','Create a theme');add.onclick=chooseCreation;addItem.append(add,el('span','New'));grid.append(addItem);wrap.append(grid);host.append(wrap);
 
