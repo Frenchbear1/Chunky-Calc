@@ -1,10 +1,11 @@
-const CACHE_NAME = 'chunky-calc-v35';
+const CACHE_NAME = 'chunky-calc-v36';
 const APP_SHELL = [
   './',
   './index.html',
   './themes.js?v=28',
   './data.js?v=22',
   './features.js?v=24',
+  './conversions.js?v=1',
   './math.js?v=13',
   './vendor/decimal.js',
   './manifest.webmanifest',
