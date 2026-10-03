@@ -17,7 +17,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="./assets/icons/favicon-16x16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
 <link rel="mask-icon" href="./assets/icons/safari-pinned-tab.svg" color="#ff7a3d">
-<script src="./themes.js?v=21"></script>
+<script src="./themes.js?v=22"></script>
 <script src="./data.js?v=21"></script>
 <script src="./features.js?v=21"></script>
 <script src="./vendor/decimal.js"></script>
@@ -110,9 +110,7 @@ html.standalone .app{--top-gap:44px;padding-bottom:12px;background:var(--bg)}
 .sw{width:min(52px,100%);aspect-ratio:1;border-radius:14px;border:3px solid transparent;box-shadow:0 0 0 1px #0002;cursor:pointer;padding:0}
 .sw.on{border-color:var(--bg);box-shadow:0 0 0 3px var(--op)}
 .theme-library{grid-template-columns:repeat(5,minmax(0,1fr));align-items:start}
-.theme-tile-shell{position:relative;width:min(52px,100%);aspect-ratio:1}
-.theme-tile-shell .sw{width:100%}
-.theme-edit{position:absolute;right:-5px;bottom:-5px;width:23px;height:23px;border-radius:8px;border:2px solid #fff;background:#353540;color:#fff;font:700 13px/1 system-ui;padding:0;display:grid;place-items:center;cursor:pointer;box-shadow:0 2px 5px #0004}
+.theme-library .sw{overflow:hidden;background-clip:padding-box;isolation:isolate}
 .theme-add{font:500 31px/1 system-ui;background:#e3e3e8!important;color:#353540!important;border:1px dashed #9898a5!important}
 .theme-choice-body{display:grid;gap:18px;padding:18px 2px 6px}.theme-choice-body p{margin:0;text-align:center;font-size:16px}.theme-choice-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}.theme-choice-actions .pill{min-height:52px;font-size:15px}
 input[type=range]{accent-color:var(--op);width:55%}
