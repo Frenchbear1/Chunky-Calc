@@ -17,7 +17,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="./assets/icons/favicon-16x16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
 <link rel="mask-icon" href="./assets/icons/safari-pinned-tab.svg" color="#ff7a3d">
-<script src="./themes.js?v=25"></script>
+<script src="./themes.js?v=26"></script>
 <script src="./data.js?v=21"></script>
 <script src="./features.js?v=24"></script>
 <script src="./vendor/decimal.js"></script>
@@ -156,17 +156,18 @@ html.standalone .theme-popup{height:100vh}
 .reuse-colors{display:flex;flex-wrap:wrap;gap:8px}.color-swatch{width:30px;height:30px;flex:none;border-radius:999px;border:2px solid white;box-shadow:0 0 0 1px #999;cursor:pointer}
 .color-swatch[aria-current=true]{width:54px;box-shadow:0 0 0 2px #6554ad}
 .individual-colors{padding-top:4px;border-top:1px solid #c5c5cf}.individual-colors[hidden]{display:none}
-.element-popup{z-index:30}.pick-body{overflow:auto;min-height:0;flex:1;padding:6px 4px 12px;overscroll-behavior:contain}
-.pick-calc{pointer-events:auto;width:min(100%,340px);padding:14px;border:0;border-radius:24px;cursor:pointer}
-.pick-calc .mini-screen{padding:16px;border-radius:18px;margin-bottom:12px;min-height:135px}
-.pick-calc .mini-history,.pick-calc .mini-expression{font-size:15px}.pick-calc .mini-answer{font-size:46px}
-.pick-calc .mini-pad{gap:10px;padding:12px;border-radius:18px}.pick-calc .mini-key{font-size:24px;border-radius:12px;box-shadow:0 4px var(--mini-shadow,var(--keyd))}
-.pick-calc .mini-key.fn{box-shadow:0 4px var(--mini-shadow,var(--fnd))}.pick-calc .mini-key.op{box-shadow:0 4px var(--mini-shadow,var(--opd))}
-.pick-calc .mini-gear{font-size:30px}.pick-calc .fx-sample{height:44px;font-size:13px;aspect-ratio:auto}
-.pick-selected{outline:3px solid #6554ad!important;outline-offset:3px}
-.pick-footer{flex:none;display:grid;gap:8px;padding-top:6px;border-top:1px solid #d5d5de}.pick-name{text-align:center;font-size:14px;font-weight:700}
-.pick-modes,.pick-parts,.pick-arrows{display:flex;justify-content:center;gap:8px}.pick-arrows button{min-width:48px;min-height:44px;font-size:20px}
-.pick-hint{font-size:13px;margin:0;text-align:center}.pick-parts [aria-pressed=true],.pick-modes [aria-pressed=true]{background:#6554ad;color:white}
+.element-popup{z-index:30}.element-popup .ph{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center}.element-popup .pick-modes{justify-self:center}
+.pick-body{overflow:hidden;min-height:0;flex:1;padding:3px 2px 6px;display:grid;place-items:center;overscroll-behavior:none}
+.pick-calc{pointer-events:auto;width:min(100%,260px);padding:9px;border:0;border-radius:19px;cursor:pointer}
+.pick-calc .mini-screen{padding:10px;border-radius:13px;margin-bottom:7px;min-height:88px}
+.pick-calc .mini-history,.pick-calc .mini-expression{font-size:11px}.pick-calc .mini-answer{font-size:34px}
+.pick-calc .mini-pad{gap:6px;padding:8px;border-radius:13px}.pick-calc .mini-key{font-size:18px;border-radius:8px;box-shadow:0 3px var(--mini-shadow,var(--keyd))}
+.pick-calc .mini-key.fn{box-shadow:0 3px var(--mini-shadow,var(--fnd))}.pick-calc .mini-key.op{box-shadow:0 3px var(--mini-shadow,var(--opd))}
+.mini-gear svg{width:16px;height:16px;display:block}.pick-calc .mini-gear svg{width:22px;height:22px}.pick-calc .fx-sample{height:31px;font-size:10px;aspect-ratio:auto}
+.pick-selected{outline:3px solid #6554ad!important;outline-offset:2px}
+.pick-footer{flex:none;display:grid;gap:7px;padding-top:6px;border-top:1px solid #d5d5de}.pick-name{text-align:center;font-size:13px;font-weight:700}
+.pick-modes,.pick-parts{display:flex;justify-content:center;gap:6px}.pick-modes .pill{padding:8px 10px;font-size:12px}
+.pick-hint{font-size:12px;margin:0;text-align:center}.pick-parts [aria-pressed=true],.pick-modes [aria-pressed=true]{background:#6554ad;color:white}
 
 /* New tools use the editor's existing neutral surfaces and rounded controls. */
 [hidden]{display:none!important}
