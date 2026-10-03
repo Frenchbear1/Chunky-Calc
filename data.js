@@ -1,26 +1,27 @@
 /* All persistent user data is registered here. Shell caches are disposable. */
 const CalcData=(()=>{
  'use strict';
- const APP_VERSION='21',BACKUP_VERSION=1,JOURNAL='cc_restore_journal_v1';
+ const APP_VERSION='22',BACKUP_VERSION=1,JOURNAL='cc_restore_journal_v1';
  const clone=v=>JSON.parse(JSON.stringify(v));
  function text(v,label,max=100000){if(typeof v!=='string'||v.length>max)throw Error(label+' must be text under '+max+' characters.');return v}
  function number(v,label,min,max){if(typeof v!=='number'||!Number.isFinite(v)||v<min||v>max)throw Error(label+' must be between '+min+' and '+max+'.');return v}
  function settings(v){
   CalcThemes.record(v,'Settings');CalcThemes.safeTree(v);
-  const allowed=['skin','sound','silent','pack','dynamic','vol','custom','customThemes','customThemeId','builtinOverrides','deletedBuiltins','haptics','themeColors','recentColors'];
+  const allowed=['skin','sound','silent','pack','dynamic','vol','custom','customStyle','customThemes','customThemeId','builtinOverrides','deletedBuiltins','haptics','themeColors','recentColors'];
   CalcThemes.only(v,allowed,'Settings');
   if(v.skin!==undefined&&![...CalcThemes.builtins,'custom'].includes(v.skin))throw Error('Unknown selected theme.');
   for(const k of ['sound','silent','dynamic','haptics'])if(v[k]!==undefined&&typeof v[k]!=='boolean')throw Error(k+' must be true or false.');
   if(v.vol!==undefined)number(v.vol,'Volume',0,1);
   if(v.pack!==undefined&&!['arcade','soft','marimba','bubble','clicky','typewriter'].includes(v.pack))throw Error('Unknown sound pack.');
   if(v.custom)CalcThemes.validatePalette(v.custom,false);
+  if(v.customStyle!==undefined)CalcThemes.validateStyle(v.customStyle);
   if(v.customThemeId!==undefined)text(v.customThemeId,'Selected theme ID',100);
-  if(v.builtinOverrides!==undefined){CalcThemes.record(v.builtinOverrides,'Built-in theme edits');for(const [id,t] of Object.entries(v.builtinOverrides)){if(!CalcThemes.builtins.includes(id))throw Error('Unknown built-in theme edit.');CalcThemes.only(t,['name','colors'],'Built-in theme edit');text(t.name,'Theme name',40);CalcThemes.validatePalette(t.colors,false)}}
+  if(v.builtinOverrides!==undefined){CalcThemes.record(v.builtinOverrides,'Built-in theme edits');for(const [id,t] of Object.entries(v.builtinOverrides)){if(!CalcThemes.builtins.includes(id))throw Error('Unknown built-in theme edit.');CalcThemes.only(t,['name','colors','style'],'Built-in theme edit');text(t.name,'Theme name',40);CalcThemes.validatePalette(t.colors,false);if(t.style!==undefined)CalcThemes.validateStyle(t.style)}}
   if(v.deletedBuiltins!==undefined){if(!Array.isArray(v.deletedBuiltins)||v.deletedBuiltins.some(id=>!CalcThemes.builtins.includes(id)))throw Error('Invalid deleted built-in themes.');v.deletedBuiltins=[...new Set(v.deletedBuiltins)]}
   if(v.customThemes!==undefined){
    if(!Array.isArray(v.customThemes)||v.customThemes.length>1000)throw Error('Custom themes must be a list of at most 1,000 themes.');
-   const ids=new Set();for(const t of v.customThemes){CalcThemes.only(t,['id','name','colors'],'Saved theme');text(t.id,'Theme ID',100);text(t.name,'Theme name',40);
-    if(!t.id||!t.name.trim()||ids.has(t.id)||CalcThemes.builtins.includes(t.id))throw Error('Invalid or duplicate custom theme ID/name.');ids.add(t.id);CalcThemes.validatePalette(t.colors,false)}
+   const ids=new Set();for(const t of v.customThemes){CalcThemes.only(t,['id','name','colors','style'],'Saved theme');text(t.id,'Theme ID',100);text(t.name,'Theme name',40);
+    if(!t.id||!t.name.trim()||ids.has(t.id)||CalcThemes.builtins.includes(t.id))throw Error('Invalid or duplicate custom theme ID/name.');ids.add(t.id);CalcThemes.validatePalette(t.colors,false);if(t.style!==undefined)CalcThemes.validateStyle(t.style)}
    if(v.skin==='custom'&&v.customThemeId&&!ids.has(v.customThemeId))throw Error('The selected custom theme is missing.');
   }
   for(const k of ['themeColors','recentColors'])if(v[k]!==undefined){if(!Array.isArray(v[k])||v[k].length>1000||v[k].some(c=>!CalcThemes.color(c)))throw Error('Invalid legacy color list: '+k)}
