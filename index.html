@@ -20,6 +20,7 @@
 <script src="./themes.js?v=28"></script>
 <script src="./data.js?v=22"></script>
 <script src="./features.js?v=24"></script>
+<script src="./conversions.js?v=1"></script>
 <script src="./vendor/decimal.js"></script>
 <script src="./math.js?v=13"></script>
 <script>
@@ -67,7 +68,8 @@ html.standalone .app{height:min(100vh,1280px);--top-gap:44px;padding-bottom:12px
 .fx-wrap{position:relative;flex:none;height:clamp(46px,7vh,58px)}
 .fx{width:100%;height:100%;font-size:clamp(16px,2.6vh,20px)!important;border-radius:18px;touch-action:none;-webkit-touch-callout:none;--d:5px;z-index:1}
 .fx-wrap .ib{position:absolute;left:0;top:0;visibility:hidden;pointer-events:none}
-.pad.adv .fx{width:calc(100% - 64px);margin-left:64px}
+.fx-wrap #convert{left:64px}
+.pad.adv .fx{position:absolute;left:128px;right:0;width:auto;margin-left:0}
 .pad.adv .fx-wrap .ib{visibility:visible;pointer-events:auto}
 .fx-wrap .ib.hot{outline:3px solid var(--op);outline-offset:2px;transform:scale(1.04)}
 .keys{flex:0 0 auto;min-height:0;position:relative}
@@ -98,8 +100,9 @@ html.standalone .app{height:min(100vh,1280px);--top-gap:44px;padding-bottom:12px
  .pad{flex:1 1 0;gap:var(--key-gap);padding:var(--panel-padding);border-radius:var(--panel-radius)}
  .fx-wrap{--gear-size:clamp(100px,22%,200px);height:clamp(52px,6vh,68px)}
  .fx-wrap .ib{width:var(--gear-size)}
+ .fx-wrap #convert{left:calc(var(--gear-size) + var(--key-gap))}
  .fx-wrap .ib svg{width:clamp(34px,5vh,48px);height:clamp(34px,5vh,48px)}
- .pad.adv .fx{width:calc(100% - var(--gear-size) - var(--key-gap));margin-left:calc(var(--gear-size) + var(--key-gap))}
+ .pad.adv .fx{left:calc(var(--gear-size) + var(--gear-size) + var(--key-gap) + var(--key-gap));right:0;width:auto;margin-left:0}
  .keys{flex:1 1 0}
  .basic{height:100%;gap:var(--key-gap)}
  .basic .k{aspect-ratio:auto;min-height:0}
@@ -213,6 +216,22 @@ html.standalone .theme-popup{height:100vh}
 .feature-actions a{display:inline-flex;align-items:center;text-decoration:none}.feature-note{font-size:13px;line-height:1.45;color:inherit;opacity:.8}
 .feature-note:empty,.ai-preview:empty{display:none}.feature-note.theme-error{opacity:1;color:#a82020}
 .backup-verified{color:#286644}.ai-samples{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:12px 0}.ai-samples .mini-calc{margin:0}.ai-preview{background:#e9e9ee;padding:12px;border-radius:20px}
+/* Fast two-way converter, opened from the hold-and-slide tool tray. */
+.conversion-sheet{z-index:45;align-items:center;justify-content:center;padding:max(14px,env(safe-area-inset-top,0px)) 14px max(14px,env(safe-area-inset-bottom,0px))}
+.conversion-panel{width:min(520px,100%);height:auto;max-height:min(900px,100%);border-radius:30px;background:var(--bg);color:var(--keytx);padding:16px;gap:12px}
+.conversion-header b{font-size:19px}.conversion-header .pill{background:var(--fn);color:var(--fntx)}
+.conversion-body{overflow-y:auto;min-height:0;display:grid;gap:12px}
+.conversion-category{display:grid;gap:6px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
+.conversion-category select,.conversion-unit{width:100%;min-width:0;border:0;border-radius:14px;font:inherit;font-size:15px;font-weight:700;padding:11px 12px;background:var(--key);color:var(--keytx)}
+.conversion-card{display:grid;gap:9px}.conversion-row{position:relative;display:grid;gap:8px;min-height:112px;padding:13px 15px;border:2px solid transparent;border-radius:22px;background:var(--screen);color:var(--ink);box-shadow:0 4px 0 var(--keyd);cursor:pointer}
+.conversion-row.active{border-color:var(--op);box-shadow:0 4px 0 var(--keyd),0 0 0 2px color-mix(in srgb,var(--op) 25%,transparent)}
+.conversion-row-top{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:10px}.conversion-row-label{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
+.conversion-unit{justify-self:end;width:min(100%,260px);padding:8px 10px;background:var(--ib);color:var(--ibtx);font-size:14px}
+.conversion-value{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;font-size:clamp(30px,7vw,48px);font-weight:800;line-height:1}
+.conversion-swap{justify-self:center;width:48px;height:40px;margin:-3px 0;border:0;border-radius:16px;background:var(--op);color:var(--optx);font:800 22px/1 var(--app-font);box-shadow:0 4px 0 var(--opd);cursor:pointer;z-index:1}.conversion-swap:active{transform:translateY(3px);box-shadow:0 1px 0 var(--opd)}
+.conversion-note{min-height:34px;margin:0;font-size:12px;line-height:1.4;color:var(--dim)}
+.conversion-keypad{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.conversion-key{min-width:0;min-height:clamp(50px,7vh,68px);border:0;border-radius:var(--key-radius);font:800 clamp(22px,4vh,32px)/1 var(--app-font);background:var(--key);color:var(--keytx);box-shadow:0 5px 0 var(--keyd),0 8px 12px #0002;cursor:pointer}.conversion-key-action{background:var(--fn);color:var(--fntx);box-shadow:0 5px 0 var(--fnd),0 8px 12px #0002}.conversion-key[data-key="⇅"]{background:var(--op);color:var(--optx);box-shadow:0 5px 0 var(--opd),0 8px 12px #0002}.conversion-key:active{transform:translateY(4px);box-shadow:0 1px 0 var(--keyd)}
+@media(max-width:599px){.conversion-sheet{align-items:flex-end;padding:0}.conversion-panel{width:100%;max-width:none;max-height:100%;border-radius:28px 28px 0 0;padding:14px 14px max(14px,env(safe-area-inset-bottom,0px))}.conversion-row{min-height:96px}.conversion-value{font-size:clamp(28px,10vw,42px)}}
 .feature-body>button{flex-shrink:0}.feature-body select,.feature-body textarea{font-size:16px}
 .feature-popup .panel{position:relative}.paste-wait-blocker{position:absolute;inset:0;z-index:8;border-radius:inherit;background:#0001;display:grid;place-items:center;touch-action:none}.paste-wait-card{display:grid;gap:4px;text-align:center;padding:13px 18px;border-radius:16px;background:#f5f5f7;color:#242429;box-shadow:0 8px 28px #0003;font-size:13px}.paste-wait-card b{font-size:14px}
 @supports(height:100dvh){.theme-popup{height:100dvh}}
@@ -226,7 +245,7 @@ body .theme-popup.theme-choice-popup .panel{width:min(320px,calc(100% - 24px));h
    <div class="tape" id="tape"></div><div class="expr"><span id="expr"></span></div><div class="main" id="main">0</div>
   </div>
  </div>
- <div class="pad" id="pad"><div class="fx-wrap"><button class="ib" id="gear" title="Settings" aria-label="Settings" tabindex="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.02,4.79 L9.92,2.22 L14.08,2.22 L14.98,4.79 L14.98,4.79 L17.45,3.61 L20.39,6.55 L19.21,9.02 L19.21,9.02 L21.78,9.92 L21.78,14.08 L19.21,14.98 L19.21,14.98 L20.39,17.45 L17.45,20.39 L14.98,19.21 L14.98,19.21 L14.08,21.78 L9.92,21.78 L9.02,19.21 L9.02,19.21 L6.55,20.39 L3.61,17.45 L4.79,14.98 L4.79,14.98 L2.22,14.08 L2.22,9.92 L4.79,9.02 L4.79,9.02 L3.61,6.55 L6.55,3.61 L9.02,4.79Z"/><circle cx="12" cy="12" r="3.5"/></svg></button><button class="k fn fx" id="fx" aria-label="Hold and slide to a function, or left to Settings. Press Enter for Settings." title="Hold and slide left for Settings">ƒ(x)  hold &amp; slide</button></div><div class="keys"><div class="basic" id="basic"></div><div class="advg" id="advg"></div></div></div>
+ <div class="pad" id="pad"><div class="fx-wrap"><button class="ib" id="gear" title="Settings" aria-label="Settings" tabindex="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.02,4.79 L9.92,2.22 L14.08,2.22 L14.98,4.79 L14.98,4.79 L17.45,3.61 L20.39,6.55 L19.21,9.02 L19.21,9.02 L21.78,9.92 L21.78,14.08 L19.21,14.98 L19.21,14.98 L20.39,17.45 L17.45,20.39 L14.98,19.21 L14.98,19.21 L14.08,21.78 L9.92,21.78 L9.02,19.21 L9.02,19.21 L6.55,20.39 L3.61,17.45 L4.79,14.98 L4.79,14.98 L2.22,14.08 L2.22,9.92 L4.79,9.02 L4.79,9.02 L3.61,6.55 L6.55,3.61 L9.02,4.79Z"/><circle cx="12" cy="12" r="3.5"/></svg></button><button class="ib" id="convert" title="Conversions" aria-label="Conversions" tabindex="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 7h13m0 0-3-3m3 3-3 3M19 17H6m0 0 3-3m-3 3 3 3"/></svg></button><button class="k fn fx" id="fx" aria-label="Hold and slide to a function, Settings, or Convert. Press Enter for Settings." title="Hold and slide left for tools">ƒ(x)  hold &amp; slide</button></div><div class="keys"><div class="basic" id="basic"></div><div class="advg" id="advg"></div></div></div>
 </div>
 <div class="sheet" id="sheet"><div class="panel"><div class="ph"><b>History · last 3 days</b><button class="pill" id="hclr">Clear</button><button class="pill" id="hx">✕</button></div><div id="hlist"></div></div></div>
 <div class="sheet" id="setsheet"><div class="panel"><div class="ph"><b>Settings</b><button class="pill" id="sx">✕</button></div><div id="sbody"></div></div></div>
@@ -403,23 +422,24 @@ function buildSet(){sb.innerHTML='';
  sec('Backup');CalcFeatures.backupControls(sb);
  sec('History');rw('Past calculations',chip('View last 3 days',false,()=>{$('setsheet').classList.remove('on');showHist()}))}
 CalcFeatures.init(S,()=>{CalcThemes.apply(S);syncChrome();buildSet()});
+CalcConversions.setSound(blip);
 const openSettings=()=>{buildSet();$('setsheet').classList.add('on');$('sx').focus()};
 $('gear').onclick=openSettings;
 const closeSettings=()=>{$('setsheet').classList.remove('on');$('fx').focus()};
 $('sx').onclick=closeSettings;
 $('setsheet').onclick=e=>{if(e.target.id==='setsheet')closeSettings()};
 const fx=$('fx'),FXL='ƒ(x)  hold & slide';let hot=null,holding=false,holdPointer=null;
-const setHot=b=>{if(b===hot)return;hot&&hot.classList.remove('hot');hot=b;if(b){b.classList.add('hot');blip(b.id==='gear'?'morph':b.dataset.k,[...advg.children].indexOf(b))}};
-const holdTarget=e=>{const el=document.elementFromPoint(e.clientX,e.clientY);return el&&el.closest?el.closest('#gear,.advg .k'):null};
+const setHot=b=>{if(b===hot)return;hot&&hot.classList.remove('hot');hot=b;if(b){b.classList.add('hot');blip(b.id==='gear'||b.id==='convert'?'morph':b.dataset.k,[...advg.children].indexOf(b))}};
+const holdTarget=e=>{const el=document.elementFromPoint(e.clientX,e.clientY);return el&&el.closest?el.closest('#gear,#convert,.advg .k'):null};
 fx.addEventListener('pointerdown',e=>{if(e.button!==0||!e.isPrimary||holding)return;e.preventDefault();holding=true;holdPointer=e.pointerId;try{fx.setPointerCapture(e.pointerId)}catch(_){}pad.classList.add('adv');fx.classList.add('pressed');fx.textContent='Slide to a key, release';blip('morph')});
 fx.addEventListener('pointermove',e=>{if(holding&&e.pointerId===holdPointer)setHot(holdTarget(e))});
-const endHold=(go,e)=>{if(!holding||e&&e.pointerId!==holdPointer)return;const target=go&&hot&&holdTarget(e);holding=false;holdPointer=null;setHot(null);pad.classList.remove('adv');fx.classList.remove('pressed');fx.textContent=FXL;if(target){if(target.id==='gear'){blip('morph');openSettings()}else{blip(target.dataset.k,'pick');press(target.dataset.k)}}};
+const endHold=(go,e)=>{if(!holding||e&&e.pointerId!==holdPointer)return;const target=go&&hot&&holdTarget(e);holding=false;holdPointer=null;setHot(null);pad.classList.remove('adv');fx.classList.remove('pressed');fx.textContent=FXL;if(target){if(target.id==='gear'){blip('morph');openSettings()}else if(target.id==='convert'){blip('morph');CalcConversions.open()}else{blip(target.dataset.k,'pick');press(target.dataset.k)}}};
 fx.addEventListener('pointerup',e=>endHold(true,e));
 ['pointercancel','lostpointercapture'].forEach(type=>fx.addEventListener(type,e=>endHold(false,e)));
 addEventListener('blur',()=>endHold(false));
 document.addEventListener('visibilitychange',()=>{if(document.hidden)endHold(false)});
 fx.addEventListener('click',e=>{if(e.detail===0)openSettings()});
-fx.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'){e.preventDefault();e.stopPropagation();openSettings()}});
+fx.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'){e.preventDefault();e.stopPropagation();openSettings()}else if(e.key==='ArrowRight'){e.preventDefault();e.stopPropagation();CalcConversions.open()}});
 fx.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('selectstart',e=>{if(!e.target.closest('input,textarea'))e.preventDefault()});
 document.addEventListener('contextmenu',e=>{if(!e.target.closest('input,textarea'))e.preventDefault()});
