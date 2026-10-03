@@ -48,10 +48,8 @@ const CalcFeatures=(()=>{
   return Promise.resolve(false);
  }
  function openAI(onSaved){
-  const view=popup('AI Theme Generator'),{body}=view,state={service:'chatgpt',preferences:'',importText:''},service=el('select','hex-input'),preferences=el('textarea','hex-input'),paste=el('textarea','hex-input theme-json'),message=live(el('p','feature-note')),importMessage=live(el('p','feature-note')),preview=el('div','ai-preview');
-  SERVICES.forEach(s=>{const o=el('option','',s.name);o.value=s.id;service.append(o)});service.value=state.service;service.setAttribute('aria-label','AI Service');preferences.rows=4;preferences.maxLength=10000;preferences.placeholder='Dark aviation cockpit, with mostly blue and small orange accents…';preferences.value=state.preferences;preferences.setAttribute('aria-label','Describe the theme you want');
-  paste.rows=6;paste.maxLength=100000;paste.spellcheck=false;paste.autocapitalize='off';paste.value=state.importText;paste.placeholder='Paste the Chunky Theme JSON here';paste.setAttribute('aria-label','Import AI Theme');
-  paste.oninput=()=>{preview.replaceChildren();importMessage.textContent=''};
+  const view=popup('AI Theme Generator'),{body}=view,service=el('select','hex-input'),preferences=el('textarea','hex-input'),message=live(el('p','feature-note')),importMessage=live(el('p','feature-note')),preview=el('div','ai-preview');
+  SERVICES.forEach(s=>{const o=el('option','',s.name);o.value=s.id;service.append(o)});service.value='chatgpt';service.setAttribute('aria-label','AI Service');preferences.rows=4;preferences.maxLength=10000;preferences.placeholder='Dark aviation cockpit, with mostly blue and small orange accents…';preferences.setAttribute('aria-label','Describe the theme you want');
   const fallback=el('div'),go=button('Go to AI',async()=>{
    const selected=SERVICES.find(s=>s.id===service.value),full=prompt(preferences.value);fallback.replaceChildren();go.disabled=true;
    const copyTask=copyPrompt(full),tab=window.open(selected.url,'_blank');if(tab)try{tab.opener=null}catch(_){}
@@ -60,15 +58,29 @@ const CalcFeatures=(()=>{
    else{status(message,'The AI opened, but iOS blocked automatic copying. Copy the prompt below.',true);const area=el('textarea','hex-input');area.rows=8;area.value=full;area.readOnly=true;area.setAttribute('aria-label','Generated theme prompt');fallback.append(area);area.focus();area.select()}
    if(!tab)location.assign(selected.url);else go.disabled=false;
   });
-  const previewButton=button('Preview Theme',()=>{
-   preview.replaceChildren();try{const theme=CalcThemes.parseTheme(paste.value);status(importMessage,'Valid theme. Preview it before saving.');
-    const title=el('h3','',theme.name),samples=el('div','ai-samples');samples.append(CalcThemes.sample(theme.theme),CalcThemes.sample(theme.theme,1));
-    const actions=el('div','feature-actions');actions.append(button('Save Theme',()=>{
-     try{const next=CalcThemes.savedSettings(app.settings,null,theme.name,theme.theme);CalcData.write('settings',next);Object.assign(app.settings,next);app.changed();view.close();if(typeof onSaved==='function')onSaved()}catch(err){status(importMessage,err.message,true)}
-    }),button('Cancel',()=>{preview.replaceChildren();status(importMessage,'Preview canceled. Your saved theme is unchanged.')}));preview.append(title,samples,actions);preview.scrollIntoView({block:'nearest'});
-   }catch(err){status(importMessage,err.message,true)}
+  function displayTheme(theme){
+   preview.replaceChildren();status(importMessage,'Valid theme. Preview it before saving.');
+   const title=el('h3','',theme.name),samples=el('div','ai-samples');samples.append(CalcThemes.sample(theme.theme),CalcThemes.sample(theme.theme,1));
+   const actions=el('div','feature-actions');actions.append(button('Save Theme',()=>{
+    try{const next=CalcThemes.savedSettings(app.settings,null,theme.name,theme.theme);CalcData.write('settings',next);Object.assign(app.settings,next);app.changed();view.close();if(typeof onSaved==='function')onSaved()}catch(err){status(importMessage,err.message,true)}
+   }),button('Cancel',()=>{preview.replaceChildren();status(importMessage,'Preview canceled. Your saved theme is unchanged.')}));preview.append(title,samples,actions);preview.scrollIntoView({block:'nearest'});
+  }
+  function manualPaste(seed='',problem=''){
+   const manual=popup('Paste Theme JSON');manual.modal.classList.add('theme-choice-popup','manual-paste-popup');
+   const field=el('textarea','hex-input theme-json'),note=live(el('p','feature-note'));field.rows=8;field.maxLength=100000;field.spellcheck=false;field.autocapitalize='off';field.placeholder='Paste the Chunky Theme JSON here';field.value=seed;field.setAttribute('aria-label','Theme JSON');
+   const previewManual=button('Preview Theme',()=>{try{const theme=CalcThemes.parseTheme(field.value);manual.close();displayTheme(theme)}catch(err){status(note,err.message,true);field.focus();field.select()}});
+   manual.body.append(label('Theme JSON',field),previewManual,note);if(problem)status(note,problem,true);field.focus();field.select();
+  }
+  const pastePreview=button('Paste and Preview',async()=>{
+   pastePreview.disabled=true;importMessage.textContent='';
+   try{
+    if(!navigator.clipboard?.readText)throw Error('Clipboard reading is unavailable.');
+    const text=await navigator.clipboard.readText();if(!text.trim())throw Error('Your clipboard is empty.');
+    try{displayTheme(CalcThemes.parseTheme(text))}catch(err){manualPaste(text,err.message)}
+   }catch(err){manualPaste('',err.message||'Automatic paste was blocked. Paste the theme manually.')}
+   finally{pastePreview.disabled=false}
   });
-  body.append(label('AI Service',service),label('Describe the theme you want',preferences),go,message,fallback,el('hr'),el('h3','','Import AI Theme'),el('p','feature-note','Copy the final JSON block from your chatbot and paste it below.'),label('Theme JSON',paste),previewButton,importMessage,preview);
+  body.append(label('AI Service',service),label('Describe the theme you want',preferences),go,message,fallback,el('hr'),el('h3','','Import AI Theme'),el('p','feature-note','Copy the final JSON block, then come back here.'),pastePreview,importMessage,preview);
  }
  function init(settings,changed){app={settings,changed};document.addEventListener('chunky-open-ai',openAI)}
  return {init,backupControls,openAI,prompt,SERVICES};
