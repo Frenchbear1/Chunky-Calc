@@ -71,14 +71,18 @@ const CalcFeatures=(()=>{
    const previewManual=button('Preview Theme',()=>{try{const theme=CalcThemes.parseTheme(field.value);manual.close();displayTheme(theme)}catch(err){status(note,err.message,true);field.focus();field.select()}});
    manual.body.append(label('Theme JSON',field),previewManual,note);if(problem)status(note,problem,true);field.focus();field.select();
   }
+  let pasteBusy=false;
   const pastePreview=button('Paste and Preview',async()=>{
-   pastePreview.disabled=true;importMessage.textContent='';
+   if(pasteBusy)return;pasteBusy=true;pastePreview.disabled=true;importMessage.textContent='';
+   const blocker=el('div','paste-wait-blocker'),waitCard=el('div','paste-wait-card');waitCard.append(el('b','','Waiting for iOS Paste'),el('span','','Choose Paste above to continue.'));blocker.append(waitCard);view.panel.append(blocker);
    try{
     if(!navigator.clipboard?.readText)throw Error('Clipboard reading is unavailable.');
     const text=await navigator.clipboard.readText();if(!text.trim())throw Error('Your clipboard is empty.');
     try{displayTheme(CalcThemes.parseTheme(text))}catch(err){manualPaste(text,err.message)}
-   }catch(err){manualPaste('',err.message||'Automatic paste was blocked. Paste the theme manually.')}
-   finally{pastePreview.disabled=false}
+   }catch(err){
+    if(err?.name==='NotAllowedError'||err?.name==='AbortError')status(importMessage,'Paste was canceled. Tap Paste and Preview whenever you’re ready.');
+    else manualPaste('',err.message||'Automatic paste was blocked. Paste the theme manually.');
+   }finally{blocker.remove();pasteBusy=false;pastePreview.disabled=false}
   });
   body.append(label('AI Service',service),label('Describe the theme you want',preferences),go,message,fallback,el('hr'),el('h3','','Import AI Theme'),el('p','feature-note','Copy the final JSON block, then come back here.'),pastePreview,importMessage,preview);
  }
