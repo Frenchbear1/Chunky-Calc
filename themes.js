@@ -194,13 +194,9 @@ const CalcThemes=(()=>{
   ];
   const colorGrid=colors=>{
    const counts={};Object.values(palette(colors)).forEach(v=>{const normalized=color(v);if(normalized)counts[normalized]=(counts[normalized]||0)+1});
-   const list=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,9);if(!list.length)return '#888888';
-   const total=list.reduce((sum,[,uses])=>sum+uses,0),stops=[];let position=0;
-   list.forEach(([shade,uses],index)=>{
-    const end=position+uses/total*100,next=list[(index+1)%list.length][0],blend=Math.min(2.8,(end-position)*.28);
-    stops.push(shade+' '+position.toFixed(2)+'%',shade+' '+Math.max(position,end-blend).toFixed(2)+'%',next+' '+end.toFixed(2)+'%');position=end;
-   });
-   return 'conic-gradient(from -18deg,'+stops.join(',')+')';
+   const list=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,9).map(([shade])=>shade);if(!list.length)return '#888888';if(list.length===1)return list[0];
+   const stops=list.map((shade,index)=>shade+' '+(index/list.length*100).toFixed(2)+'%');stops.push(list[0]+' 100%');
+   return 'conic-gradient(from -24deg,'+stops.join(',')+')';
   };
   const selectTheme=t=>{if(t.builtin){s.skin=t.id;delete s.customThemeId;delete s.custom}else{s.skin='custom';s.customThemeId=t.id;s.custom={...t.colors}}onChange()};
   themes.forEach(t=>{
