@@ -193,9 +193,18 @@ const CalcThemes=(()=>{
    ...s.customThemes.map(t=>({...t,builtin:false}))
   ];
   const colorGrid=colors=>{
-   const counts={};Object.values(palette(colors)).forEach(v=>{const normalized=color(v);if(normalized)counts[normalized]=(counts[normalized]||0)+1});
-   const list=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,9).map(([shade])=>shade);if(!list.length)return '#888888';if(list.length===1)return list[0];
-   const stops=list.map((shade,index)=>shade+' '+(index/list.length*100).toFixed(2)+'%');stops.push(list[0]+' 100%');
+   const p=palette(colors),areas={};
+   const add=(specificId,base,weight)=>{const shade=color(p[specificId])||color(p[base]);if(shade)areas[shade]=(areas[shade]||0)+weight};
+   add('part_canvas_fill','bg',8);add('part_panel_fill','panel',12);add('part_display_fill','screen',25);
+   add('part_answer_text','ink',2);add('part_history_text','dim',1);add('part_expression_text','dim',1);
+   add('part_gear_fill','ib',1);add('part_gear_text','ibtx',.3);add('part_gear_shadow','fnd',.5);
+   add('part_bar_fill','fn',1.5);add('part_bar_text','fntx',.4);add('part_bar_shadow','fnd',.6);
+   const groups=basicKeys.map((_,i)=>i%4===3?'op':i<3||i===16?'fn':'key'),counts={key:0,fn:0,op:0};groups.forEach(group=>counts[group]++);
+   const fillWeight={key:18,fn:7,op:10},textWeight={key:1.5,fn:.75,op:.75},shadowWeight={key:3,fn:1.5,op:1.5};
+   groups.forEach((group,index)=>{add('part_b'+index+'_fill',group,fillWeight[group]/counts[group]);add('part_b'+index+'_text',group==='key'?'keytx':group==='fn'?'fntx':'optx',textWeight[group]/counts[group]);add('part_b'+index+'_shadow',group==='key'?'keyd':group==='fn'?'fnd':'opd',shadowWeight[group]/counts[group])});
+   const list=Object.entries(areas).sort((a,b)=>b[1]-a[1]).slice(0,10);if(!list.length)return '#888888';if(list.length===1)return list[0][0];
+   const total=list.reduce((sum,[,area])=>sum+area,0),stops=[];let position=0;
+   list.forEach(([shade,area],index)=>{const end=position+area/total*100,next=list[(index+1)%list.length][0],blend=Math.min(1.35,(end-position)*.16);stops.push(shade+' '+position.toFixed(2)+'%',shade+' '+Math.max(position,end-blend).toFixed(2)+'%',next+' '+end.toFixed(2)+'%');position=end});
    return 'conic-gradient(from -24deg,'+stops.join(',')+')';
   };
   const selectTheme=t=>{if(t.builtin){s.skin=t.id;delete s.customThemeId;delete s.custom}else{s.skin='custom';s.customThemeId=t.id;s.custom={...t.colors}}onChange()};
