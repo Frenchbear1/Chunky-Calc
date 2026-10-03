@@ -113,7 +113,7 @@ const CalcThemes=(()=>{
   fields.forEach(([k])=>root.style.setProperty('--'+k,p[k]));
   const node=(tag,cls,text,id)=>{const n=el(tag,cls,text);n.dataset.target=id;return n};
   const screen=node('div','mini-screen','','display'),history=node('div','mini-history','24 × 5 = 120','history'),expression=node('div','mini-expression','24 × 5 =','expression'),answer=node('div','mini-answer','120','answer');screen.append(history,expression,answer);
-  const pad=node('div','mini-pad','','panel');pad.append(node('span','mini-gear','⚙︎','gear'),node('span','mini-key fn fx-sample','ƒ(x) hold & slide','bar'));
+  const pad=node('div','mini-pad','','panel'),gear=node('span','mini-gear','','gear');gear.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21h-4v-.08A1.7 1.7 0 0 0 9 19.36a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.63 15a1.7 1.7 0 0 0-1.56-1.03H3v-4h.08A1.7 1.7 0 0 0 4.64 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.63a1.7 1.7 0 0 0 1.03-1.56V3h4v.08A1.7 1.7 0 0 0 15 4.64a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.37 9a1.7 1.7 0 0 0 1.56 1.03H21v4h-.08A1.7 1.7 0 0 0 19.4 15Z"/></svg>';pad.append(gear,node('span','mini-key fn fx-sample','ƒ(x) hold & slide','bar'));
   (mode?advancedKeys:basicKeys).forEach((k,i)=>pad.append(node('span','mini-key'+(mode?' fn':i%4===3?' op':i<3||i===16?' fn':''),k,(mode?'a':'b')+i)));
   root.append(screen,pad);
   // Inline colors here use the same saved targets as the actual calculator.
@@ -128,9 +128,9 @@ const CalcThemes=(()=>{
  }
  function pickElement(p,current,onConfirm,onClose){
   const el=element,focused=document.activeElement,modal=el('div','sheet on theme-popup element-popup'),panel=el('div','panel'),header=el('div','ph'),cancel=el('button','pill','Cancel'),confirm=el('button','pill','Confirm');
-  modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-label','Pick a calculator part');cancel.type=confirm.type='button';header.append(cancel,el('b','','Pick a part'),confirm);
-  const modeRow=el('div','pick-modes'),body=el('div','pick-body'),footer=el('div','pick-footer'),name=el('div','pick-name'),parts=el('div','pick-parts'),arrows=el('div','pick-arrows');name.setAttribute('aria-live','polite');
-  footer.append(name,parts,arrows);panel.append(header,el('p','pick-hint','Tap a part. Use the arrows to reach nearby parts.'),modeRow,body,footer);modal.append(panel);document.body.append(modal);
+  modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-label','Pick a calculator part');cancel.type=confirm.type='button';
+  const modeRow=el('div','pick-modes'),body=el('div','pick-body'),footer=el('div','pick-footer'),name=el('div','pick-name'),parts=el('div','pick-parts');name.setAttribute('aria-live','polite');
+  header.append(cancel,modeRow,confirm);footer.append(name,parts);panel.append(header,el('p','pick-hint','Tap the part you want to customize.'),body,footer);modal.append(panel);document.body.append(modal);
   let chosen=specific(current),target=chosen?chosen.target:targets.find(t=>t.id==='b4'),part=chosen?chosen.part:'fill',mode=target.mode||0,calc;
   const close=()=>{modal.remove();if(focused&&focused.isConnected)focused.focus();if(onClose)onClose()};
   const modeButtons=[0,1].map(m=>{const b=el('button','pill',m?'Advanced keys':'Basic keys');b.type='button';b.onclick=()=>{mode=m;if(target.mode!==undefined&&target.mode!==mode){target=targets.find(t=>t.id===(m?'a0':'b0'));part='fill'}draw()};modeRow.append(b);return b});
@@ -141,7 +141,6 @@ const CalcThemes=(()=>{
   }
   function draw(){calc=sample(p,mode,true);body.replaceChildren(calc);calc.onclick=e=>{const n=e.target.closest('[data-target]');if(n)select(targets.find(t=>t.id===n.dataset.target))};modeButtons.forEach((b,i)=>b.setAttribute('aria-pressed',String(mode===i)));highlight()}
   function move(direction){const items=[calc,...calc.querySelectorAll('[data-target]')].map(n=>{const r=n.getBoundingClientRect();return {id:n.dataset.target,x:r.left+r.width/2,y:r.top+r.height/2,node:n}}),next=nearest(items,target.id,direction);if(next){select(targets.find(t=>t.id===next.id));next.node.scrollIntoView({block:'nearest',inline:'nearest'})}}
-  [['left','←'],['up','↑'],['down','↓'],['right','→']].forEach(([direction,symbol])=>{const b=el('button','pill',symbol);b.type='button';b.setAttribute('aria-label','Select nearest part '+direction);b.onclick=()=>move(direction);arrows.append(b)});
   cancel.onclick=close;confirm.onclick=()=>{onConfirm('part_'+target.id+'_'+part);close()};
   modal.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape'){e.preventDefault();close()}const d={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down'}[e.key];if(d){e.preventDefault();move(d)}if(e.key==='Tab'){const buttons=[...panel.querySelectorAll('button')];if(e.shiftKey&&document.activeElement===buttons[0]){e.preventDefault();buttons.at(-1).focus()}else if(!e.shiftKey&&document.activeElement===buttons.at(-1)){e.preventDefault();buttons[0].focus()}}});
   draw();cancel.focus();
