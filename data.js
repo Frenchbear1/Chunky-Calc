@@ -1,14 +1,13 @@
-/* All persistent user data is registered here. Shell caches are disposable; icon
-   cache entries are regenerated from the saved recipe. Never clear the origin. */
+/* All persistent user data is registered here. Shell caches are disposable. */
 const CalcData=(()=>{
  'use strict';
- const APP_VERSION='18',BACKUP_VERSION=1,JOURNAL='cc_restore_journal_v1';
+ const APP_VERSION='21',BACKUP_VERSION=1,JOURNAL='cc_restore_journal_v1';
  const clone=v=>JSON.parse(JSON.stringify(v));
  function text(v,label,max=100000){if(typeof v!=='string'||v.length>max)throw Error(label+' must be text under '+max+' characters.');return v}
  function number(v,label,min,max){if(typeof v!=='number'||!Number.isFinite(v)||v<min||v>max)throw Error(label+' must be between '+min+' and '+max+'.');return v}
  function settings(v){
   CalcThemes.record(v,'Settings');CalcThemes.safeTree(v);
-  const allowed=['skin','sound','silent','pack','dynamic','vol','custom','customThemes','customThemeId','haptics','themeColors','recentColors'];
+  const allowed=['skin','sound','silent','pack','dynamic','vol','custom','customThemes','customThemeId','builtinOverrides','deletedBuiltins','haptics','themeColors','recentColors'];
   CalcThemes.only(v,allowed,'Settings');
   if(v.skin!==undefined&&![...CalcThemes.builtins,'custom'].includes(v.skin))throw Error('Unknown selected theme.');
   for(const k of ['sound','silent','dynamic','haptics'])if(v[k]!==undefined&&typeof v[k]!=='boolean')throw Error(k+' must be true or false.');
@@ -16,6 +15,8 @@ const CalcData=(()=>{
   if(v.pack!==undefined&&!['arcade','soft','marimba','bubble','clicky','typewriter'].includes(v.pack))throw Error('Unknown sound pack.');
   if(v.custom)CalcThemes.validatePalette(v.custom,false);
   if(v.customThemeId!==undefined)text(v.customThemeId,'Selected theme ID',100);
+  if(v.builtinOverrides!==undefined){CalcThemes.record(v.builtinOverrides,'Built-in theme edits');for(const [id,t] of Object.entries(v.builtinOverrides)){if(!CalcThemes.builtins.includes(id))throw Error('Unknown built-in theme edit.');CalcThemes.only(t,['name','colors'],'Built-in theme edit');text(t.name,'Theme name',40);CalcThemes.validatePalette(t.colors,false)}}
+  if(v.deletedBuiltins!==undefined){if(!Array.isArray(v.deletedBuiltins)||v.deletedBuiltins.some(id=>!CalcThemes.builtins.includes(id)))throw Error('Invalid deleted built-in themes.');v.deletedBuiltins=[...new Set(v.deletedBuiltins)]}
   if(v.customThemes!==undefined){
    if(!Array.isArray(v.customThemes)||v.customThemes.length>1000)throw Error('Custom themes must be a list of at most 1,000 themes.');
    const ids=new Set();for(const t of v.customThemes){CalcThemes.only(t,['id','name','colors'],'Saved theme');text(t.id,'Theme ID',100);text(t.name,'Theme name',40);
@@ -29,16 +30,11 @@ const CalcData=(()=>{
   if(!Array.isArray(v)||v.length>100000)throw Error('History must be a list of at most 100,000 calculations.');
   for(const h of v){CalcThemes.only(h,['e','r','t'],'History entry');text(h.e,'Expression',4096);if(typeof h.r==='number')number(h.r,'Result',-Number.MAX_VALUE,Number.MAX_VALUE);else text(h.r,'Result',10000);number(h.t,'History timestamp',0,8640000000000000)}return v;
  }
- function icon(v){
-  CalcThemes.only(v,['version','seed','variant','colors','themeName'],'App icon');if(v.version!==1)throw Error('Unsupported app icon version.');
-  number(v.seed,'Icon seed',0,4294967295);number(v.variant,'Icon variation',0,4);if(!Number.isInteger(v.seed)||!Number.isInteger(v.variant))throw Error('Icon seed and variation must be integers.');
-  CalcThemes.validatePalette(v.colors);text(v.themeName,'Icon theme name',40);return v;
- }
- function ai(v){CalcThemes.only(v,['service','preferences','importText'],'AI preferences');if(!['chatgpt','claude','gemini'].includes(v.service))throw Error('Unknown AI service.');text(v.preferences,'Theme preferences',10000);text(v.importText,'AI theme draft',100000);return v}
  // Adding a new store here automatically includes it in Export Everything.
- const stores={settings:{key:'cc_set',validate:settings},history:{key:'cc_hist',validate:history},icon:{key:'cc_icon',validate:icon},ai:{key:'cc_ai',validate:ai}};
+ const stores={settings:{key:'cc_set',validate:settings},history:{key:'cc_hist',validate:history}};
+ const retired=new Set(['cc_icon','cc_ai']);try{retired.forEach(key=>localStorage.removeItem(key))}catch(_){}
  const keys=()=>Object.values(stores).map(x=>x.key);
- function validateRaw(key,raw){const def=Object.values(stores).find(x=>x.key===key);if(!def)throw Error('Unsupported app data: '+key+'. Update the app before importing this backup.');if(raw===null)return;text(raw,key,8000000);let v;try{v=JSON.parse(raw)}catch(_){throw Error('Invalid stored JSON in '+key)}CalcThemes.safeTree(v);def.validate(v)}
+ function validateRaw(key,raw){if(retired.has(key))return;const def=Object.values(stores).find(x=>x.key===key);if(!def)throw Error('Unsupported app data: '+key+'. Update the app before importing this backup.');if(raw===null)return;text(raw,key,8000000);let v;try{v=JSON.parse(raw)}catch(_){throw Error('Invalid stored JSON in '+key)}CalcThemes.safeTree(v);def.validate(v)}
  function guard(){if(localStorage.getItem(JOURNAL)!==null)throw Error('An interrupted import needs recovery. Reload before changing saved data.')}
  function write(store,value){guard();const def=stores[store];def.validate(value);localStorage.setItem(def.key,JSON.stringify(value))}
  function read(store,fallback=null){try{const raw=localStorage.getItem(stores[store].key);if(raw===null)return fallback;validateRaw(stores[store].key,raw);return JSON.parse(raw)}catch(_){return fallback}}
@@ -70,6 +66,6 @@ const CalcData=(()=>{
   localStorage.setItem(JOURNAL,JSON.stringify(before));
   try{applyRaw(Object.fromEntries(Object.entries(value.data.localStorage).map(([k,v])=>[k,v===null?null:JSON.stringify(v)])));localStorage.removeItem(JOURNAL)}catch(err){try{applyRaw(before);localStorage.removeItem(JOURNAL)}catch(_){throw Error('Restore was interrupted. Keep this tab open and free some device storage, then reload to recover your previous data.')}throw Error('Import could not be saved. Your previous data was restored. '+err.message)}
  }
- return {APP_VERSION,BACKUP_VERSION,stores,write,read,collect,backup,parseBackup,validateBackup,restore,recover,validateSettings:settings,validateIcon:icon};
+ return {APP_VERSION,BACKUP_VERSION,stores,write,read,collect,backup,parseBackup,validateBackup,restore,recover,validateSettings:settings};
 })();
 try{CalcData.recover()}catch(error){addEventListener('DOMContentLoaded',()=>alert('Chunky could not finish recovering an interrupted restore. '+error.message))}
