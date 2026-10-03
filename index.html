@@ -17,7 +17,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="./assets/icons/favicon-16x16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
 <link rel="mask-icon" href="./assets/icons/safari-pinned-tab.svg" color="#ff7a3d">
-<script src="./themes.js?v=27"></script>
+<script src="./themes.js?v=28"></script>
 <script src="./data.js?v=22"></script>
 <script src="./features.js?v=24"></script>
 <script src="./vendor/decimal.js"></script>
@@ -165,7 +165,7 @@ input[type=range]{accent-color:var(--op);width:55%}
 .hex-input{-webkit-user-select:text;user-select:text}.hex-input[aria-invalid=true]{border-color:#b42318}
 .color-controls input[type=range]{width:100%;accent-color:#6554ad}.custom-presets{display:flex;flex-wrap:wrap;gap:6px}
 .custom-presets button{border:1px solid #c5c5cf;border-radius:20px;padding:7px 10px;font:inherit;font-size:12px;background:#fff;color:#242429;cursor:pointer}
-.layout-controls{display:grid;gap:12px;padding-top:14px;border-top:1px solid #c5c5cf}.layout-controls h3{font-size:16px;margin:0}.layout-controls>p{margin-top:-5px}
+.editor-pane{display:grid;gap:12px}.editor-pane[hidden]{display:none}.layout-controls{display:grid;gap:12px}.layout-controls h3{font-size:16px;margin:0}.layout-controls>p{margin-top:-5px}
 .style-font-label,.layout-control{display:grid;gap:6px;font-size:13px;font-weight:650}.layout-controls select{font:inherit;font-size:16px;border:1px solid #c5c5cf;background:#fff;color:#242429;padding:10px;border-radius:10px;width:100%}
 .layout-control-head{display:flex;justify-content:space-between;gap:12px;align-items:center}.layout-control output{font-size:12px;font-weight:750;color:#6554ad}.layout-control input[type=range]{width:100%;accent-color:#6554ad}
 .theme-manager{display:grid;gap:8px;margin:8px 0 14px}
@@ -174,6 +174,9 @@ input[type=range]{accent-color:var(--op);width:55%}
 html.standalone .theme-popup{height:100vh}
 @media(display-mode:standalone){.theme-popup{height:100vh}}
 .theme-popup .pill{background:#dddde5;color:#242429}.theme-popup button[type=submit]{background:#353540;color:white}
+.theme-edit-header{display:grid;grid-template-columns:auto minmax(104px,1fr) auto;align-items:center;gap:6px}.theme-edit-header>.pill,.theme-header-actions>.pill{padding:8px 10px}
+.edit-tabs{justify-self:center;width:min(100%,150px);display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px;border-radius:99px;background:#dddde5}.theme-edit-header .edit-tabs .pill{min-height:36px;padding:6px 8px;background:transparent}.theme-edit-header .edit-tabs .pill[aria-pressed=true]{background:#353540;color:#fff}
+.theme-header-actions{display:flex;align-items:center;gap:5px}
 .theme-popup .undo-button{display:grid;place-items:center;min-width:44px;min-height:44px;padding:9px;border-radius:14px}.undo-button svg{width:25px;height:25px}
 .theme-popup button:disabled{opacity:.35;cursor:default}
 .theme-body{overflow-y:auto;min-height:0;flex:1}.theme-body>label{display:grid;gap:6px;font-size:14px;font-weight:650}.theme-error{color:#a82020;font-size:13px;margin:8px 0}
@@ -371,7 +374,7 @@ function render(pop){let v='0';$('expr').textContent=after?fmtE(lastE)+' =':fmtE
  if(after)v=fmt(expr.replace('−','-'));
  else if(expr){if(/^−?[\d.]*$/.test(expr))v=fmt(expr.replace('−','-'))||'0';else{const p=prev(expr);v=p===null?(fmt(expr.split(/[+−×÷^(]/).pop())||'0'):fmt(p)}}
  const m=$('main');
- m.textContent=v;const displayWidth=$('screen').clientWidth||500,displayScale=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--display-font-scale'))||1,maxMain=Math.min(140,Math.max(76,displayWidth*.13))*displayScale;m.style.fontSize=Math.max(18,Math.min(maxMain,displayWidth*.86/Math.max(1,v.length*.58)))+'px';
+ m.textContent=v;const displayWidth=$('screen').clientWidth||500,displayScale=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--display-font-scale'))||1,targetSize=Math.min(140,Math.max(76,displayWidth*.13))*displayScale;m.style.fontSize=targetSize+'px';const available=Math.max(1,m.clientWidth),needed=Math.max(1,m.scrollWidth);if(needed>available)m.style.fontSize=Math.max(12,targetSize*available/needed*.94)+'px';
  advg.querySelector('[data-k="Deg"]').textContent=deg?'Deg':'Rad';
  if(pop){m.classList.add('pop');setTimeout(()=>m.classList.remove('pop'),120)}
  const t=$('tape');t.innerHTML='';hist.slice(-30).forEach(h=>{const d=document.createElement('div');d.append(document.createTextNode(fmtE(h.e)+' = '));const answer=document.createElement('b');answer.textContent=fmt(h.r);d.append(answer);d.onclick=()=>{expr=neg(h.r);after=false;render()};t.appendChild(d)});t.scrollTop=t.scrollHeight}
