@@ -14,13 +14,25 @@ const CalcThemes=(()=>{
   {id:'displayScale',label:'Display text size',min:70,max:150,step:5,default:100,unit:'%'},
   {id:'keyDepth',label:'Key depth',min:0,max:14,step:1,default:7,unit:'px'}
  ];
- const fontChoices=[['rounded','Rounded'],['clean','Clean'],['bold','Bold'],['classic','Classic'],['mono','Mono']];
+ const fontChoices=[
+  ['rounded','Rounded'],['clean','Clean'],['bold','Heavy'],['condensed','Condensed'],
+  ['geometric','Geometric'],['retro','Retro'],['classic','Classic serif'],['elegant','Elegant serif'],
+  ['typewriter','Typewriter'],['mono','Monospace'],['handwritten','Handwritten'],['marker','Marker'],['friendly','Playful']
+ ];
  const fontStacks={
-  rounded:'ui-rounded,"SF Pro Rounded","Nunito",system-ui,sans-serif',
-  clean:'-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif',
-  bold:'"Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif',
+  rounded:'ui-rounded,"SF Pro Rounded","Arial Rounded MT Bold","Nunito",system-ui,sans-serif',
+  clean:'-apple-system,BlinkMacSystemFont,"Helvetica Neue","Segoe UI",system-ui,sans-serif',
+  bold:'Impact,"Arial Black","Avenir Next Heavy",system-ui,sans-serif',
+  condensed:'"Avenir Next Condensed","Arial Narrow","Helvetica Neue Condensed",sans-serif',
+  geometric:'Futura,"Avenir Next","Century Gothic",sans-serif',
+  retro:'Copperplate,Futura,"Arial Black",sans-serif',
   classic:'Georgia,"Times New Roman",serif',
-  mono:'"SFMono-Regular",Consolas,"Liberation Mono",monospace'
+  elegant:'Didot,"Bodoni 72","Bodoni MT",serif',
+  typewriter:'"American Typewriter","Courier New",serif',
+  mono:'"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace',
+  handwritten:'Noteworthy,"Bradley Hand","Segoe Print",cursive',
+  marker:'"Marker Felt","Chalkboard SE","Comic Sans MS",cursive',
+  friendly:'"Chalkboard SE","Comic Sans MS","Trebuchet MS",cursive'
  };
  const styleDefaults=Object.fromEntries([...styleFields.map(x=>[x.id,x.default]),['font','rounded']]);
  function appearance(value){
@@ -183,9 +195,10 @@ const CalcThemes=(()=>{
  }
  function editor(host,s,onChange,beforeChange=()=>{},hooks={}){
   const el=element,box=el('section','custom-editor');box.setAttribute('aria-label','Custom theme editor');
-  const preview=el('div','mini-preview');box.append(preview,el('p','','Pick a soft palette, adjust a group, or choose one specific part. Save when you’re happy with it.'));
+  const preview=el('div','mini-preview'),colorPane=el('section','editor-pane color-pane'),layoutPane=el('section','editor-pane layout-pane');layoutPane.hidden=true;
+  box.append(preview);colorPane.append(el('p','','Pick a soft palette, adjust a group, or choose one specific part. Save when you’re happy with it.'));
   const presetsRow=el('div','custom-presets');
-  presets.forEach(([name,p])=>{const b=el('button','',name);b.type='button';b.onclick=()=>{finish();beforeChange();s.custom={...p};commit();sync()};presetsRow.append(b)});box.append(presetsRow);
+  presets.forEach(([name,p])=>{const b=el('button','',name);b.type='button';b.onclick=()=>{finish();beforeChange();s.custom={...p};commit();sync()};presetsRow.append(b)});colorPane.append(presetsRow);
   const controls=el('div','color-controls'),part=el('select');part.setAttribute('aria-label','Calculator element');
   const label=(name,input)=>{const l=el('label','',name);l.append(input);return l};
   const selectRow=el('div','part-select-row'),selectPart=el('button','pill','Select');selectPart.type='button';selectPart.setAttribute('aria-label','Select a specific element');selectRow.append(part,selectPart);controls.append(label('Choose a part',selectRow));
@@ -202,7 +215,7 @@ const CalcThemes=(()=>{
   const layoutInputs=new Map();
   const formatStyle=(def,value)=>def.unit==='size'?(100+value*3)+'%':value+def.unit;
   styleFields.forEach(def=>{const row=el('label','layout-control'),head=el('span','layout-control-head'),title=el('span','',def.label),value=el('output'),input=el('input');input.type='range';input.min=def.min;input.max=def.max;input.step=def.step;input.setAttribute('aria-label',def.label);head.append(title,value);row.append(head,input);layout.append(row);layoutInputs.set(def.id,{input,value,def})});
-  box.append(controls,layout);host.append(box);
+  colorPane.append(controls);layoutPane.append(layout);box.append(colorPane,layoutPane);host.append(box);
   let active='bg',editing=false,styleEditing=false;
   function finish(){editing=styleEditing=false}
   function options(){
@@ -221,18 +234,18 @@ const CalcThemes=(()=>{
   fontSelect.onchange=()=>{finish();beforeChange();s.style=appearance({...s.style,font:fontSelect.value});commit();syncStyle()};
   layoutInputs.forEach(({input},id)=>{input.oninput=()=>updateStyle(id,+input.value);input.onchange=finish;input.onblur=finish});
   selectPart.onclick=()=>{finish();part.blur?.();pickElement(palette(s.custom),active,id=>{if(!s.custom[id]){beforeChange();s.custom[id]=valueFor(s.custom,id)}active=id;commit();sync()},s.style)};
-  part.onchange=()=>{finish();active=part.value;preview.replaceChildren(sample(s.custom,specific(active)?.target.mode||0));sync();if(hooks.selection)hooks.selection(active,Object.hasOwn(s.custom,active)&&!!specific(active))};
+  part.onchange=()=>{finish();active=part.value;preview.replaceChildren(sample(s.custom,specific(active)?.target.mode||0,false,s.style));sync();if(hooks.selection)hooks.selection(active,Object.hasOwn(s.custom,active)&&!!specific(active))};
   picker.oninput=()=>update(picker.value);picker.onchange=finish;picker.onblur=finish;
   hex.oninput=()=>{const v=color(hex.value);if(v){update(v,false,true);hint.textContent='Preview updated.'}else{hex.setAttribute('aria-invalid','true');hint.textContent='Enter a hex color, such as #D8C5E8.'}};
   hex.onchange=()=>{const v=color(hex.value);if(v)hex.value=v;finish()};hex.onblur=finish;
   ranges.forEach(r=>{r.oninput=()=>update(fromHsl(...ranges.map(x=>+x.value)),true);r.onchange=finish;r.onblur=finish});
   commit();sync();
-  return {get active(){return active},refresh(){finish();commit();sync()}};
+  return {get active(){return active},refresh(){finish();commit();sync()},showPane(kind){colorPane.hidden=kind!=='color';layoutPane.hidden=kind!=='layout'}};
  }
  function manager(host,s,onChange,services={}){
   const el=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e};
   const wrap=el('div');wrap.className='theme-manager';const grid=el('div');grid.className='sws theme-library';
-  const activeId=s.skin==='custom'?s.customThemeId:s.skin;
+  let activeId=s.skin==='custom'?s.customThemeId:s.skin;
   const themes=[
    ...builtins.filter(id=>!(s.deletedBuiltins||[]).includes(id)).map(id=>({id,name:s.builtinOverrides?.[id]?.name||builtinNames[id],colors:s.builtinOverrides?.[id]?.colors||builtinPalettes[id],style:s.builtinOverrides?.[id]?.style||styleDefaults,builtin:true})),
    ...s.customThemes.map(t=>({...t,style:appearance(t.style),builtin:false}))
@@ -252,10 +265,11 @@ const CalcThemes=(()=>{
    list.forEach(([shade,area],index)=>{const end=position+area/total*100,next=list[(index+1)%list.length][0],blend=Math.min(1.35,(end-position)*.16);stops.push(shade+' '+position.toFixed(2)+'%',shade+' '+Math.max(position,end-blend).toFixed(2)+'%',next+' '+end.toFixed(2)+'%');position=end});
    return 'conic-gradient(from -24deg,'+stops.join(',')+')';
   };
-  const selectTheme=t=>{if(t.builtin){s.skin=t.id;delete s.customThemeId;delete s.custom;delete s.customStyle}else{s.skin='custom';s.customThemeId=t.id;s.custom={...t.colors};s.customStyle=appearance(t.style)}onChange()};
+  const syncSelection=()=>grid.querySelectorAll('[data-theme-id]').forEach(button=>{const selected=button.dataset.themeId===activeId;button.classList.toggle('on',selected);button.setAttribute('aria-pressed',String(selected));button.setAttribute('aria-label',(selected?'Edit ':'Use ')+button.dataset.themeName)});
+  const selectTheme=t=>{if(t.builtin){s.skin=t.id;delete s.customThemeId;delete s.custom;delete s.customStyle}else{s.skin='custom';s.customThemeId=t.id;s.custom={...t.colors};s.customStyle=appearance(t.style)}activeId=t.id;syncSelection();onChange()};
   themes.forEach(t=>{
    const item=el('div');item.className='theme-option';const selected=activeId===t.id;
-   const swatch=el('button');swatch.type='button';swatch.className='sw theme-square'+(selected?' on':'');swatch.style.background=colorGrid(t.colors);swatch.setAttribute('aria-label',(selected?'Edit ':'Use ')+t.name);swatch.setAttribute('aria-pressed',String(selected));swatch.onclick=()=>selected?open(t):selectTheme(t);
+   const swatch=el('button');swatch.type='button';swatch.className='sw theme-square'+(selected?' on':'');swatch.dataset.themeId=t.id;swatch.dataset.themeName=t.name;swatch.style.background=colorGrid(t.colors);swatch.setAttribute('aria-label',(selected?'Edit ':'Use ')+t.name);swatch.setAttribute('aria-pressed',String(selected));swatch.onclick=()=>activeId===t.id?open(t):selectTheme(t);
    item.append(swatch,el('span',t.name));grid.append(item);
   });
   const addItem=el('div');addItem.className='theme-option';const add=el('button','+');add.type='button';add.className='sw theme-square theme-add';add.setAttribute('aria-label','Create a theme');add.onclick=chooseCreation;addItem.append(add,el('span','New'));grid.append(addItem);wrap.append(grid);host.append(wrap);
@@ -271,8 +285,9 @@ const CalcThemes=(()=>{
   function open(existing){
    const focused=document.activeElement,base=existing?existing.colors:builtinPalettes.cream,draft={custom:palette(base),style:appearance(existing?.style)};
    const modal=el('div');modal.className='sheet on theme-popup';modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-label',existing?'Edit theme':'Create theme');
-   const panel=el('form');panel.className='panel';const header=el('div');header.className='ph';
-   const cancel=el('button','Cancel'),undo=el('button'),save=el('button','Save');cancel.type=undo.type='button';save.type='submit';cancel.className=undo.className=save.className='pill';undo.classList.add('undo-button');undo.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 10l6 6M3 10h11a7 7 0 0 1 0 14" transform="translate(0 -2)"/></svg>';undo.setAttribute('aria-label','Undo last edit');undo.title='Undo last edit';undo.disabled=true;header.append(cancel,el('b',existing?'Edit theme':'Create theme'),undo,save);
+   const panel=el('form');panel.className='panel';const header=el('div');header.className='ph theme-edit-header';
+   const cancel=el('button','Cancel'),undo=el('button'),save=el('button','Save'),tabs=el('div'),colorTab=el('button','Color'),layoutTab=el('button','Layout'),headerActions=el('div');
+   cancel.type=undo.type=colorTab.type=layoutTab.type='button';save.type='submit';cancel.className=undo.className=save.className=colorTab.className=layoutTab.className='pill';tabs.className='edit-tabs';headerActions.className='theme-header-actions';undo.classList.add('undo-button');undo.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 10l6 6M3 10h11a7 7 0 0 1 0 14" transform="translate(0 -2)"/></svg>';undo.setAttribute('aria-label','Undo last edit');undo.title='Undo last edit';undo.disabled=true;tabs.append(colorTab,layoutTab);headerActions.append(undo,save);header.append(cancel,tabs,headerActions);
    const body=el('div');body.className='theme-body';const nameLabel=el('label','Theme name'),name=el('input');name.type='text';name.maxLength=40;name.autocomplete='off';name.value=existing?existing.name:'';name.placeholder='e.g. Soft sage';name.className='hex-input';name.setAttribute('aria-label','Theme name');nameLabel.append(name);body.append(nameLabel);
    let previousName=name.value,editing;
    const history=timeline(()=>({name:previousName,colors:palette(draft.custom),style:appearance(draft.style)}),state=>{name.value=previousName=state.name;draft.custom=state.colors;draft.style=appearance(state.style);editing.refresh()});
@@ -282,7 +297,9 @@ const CalcThemes=(()=>{
    const footer=el('div');footer.className='theme-delete-row';const removeTheme=el('button','Delete Theme'),removePart=el('button','Delete Element');
    for(const b of [removeTheme,removePart]){b.type='button';b.className='delete-outline'}
    removeTheme.hidden=!existing;removePart.hidden=true;footer.append(removeTheme,removePart);
-   editing=editor(body,draft,()=>{},checkpoint,{selection:(id,custom)=>{removePart.hidden=!custom}});body.querySelector('.custom-editor').append(footer);panel.append(header,body);modal.append(panel);document.body.append(modal);
+   editing=editor(body,draft,()=>{},checkpoint,{selection:(id,custom)=>{removePart.hidden=!custom}});
+   const showTab=kind=>{colorTab.setAttribute('aria-pressed',String(kind==='color'));layoutTab.setAttribute('aria-pressed',String(kind==='layout'));editing.showPane(kind);body.scrollTop=0};colorTab.onclick=()=>showTab('color');layoutTab.onclick=()=>showTab('layout');showTab('color');
+   body.querySelector('.custom-editor').append(footer);panel.append(header,body);modal.append(panel);document.body.append(modal);
    removeTheme.onclick=()=>{if(!existing||!confirm('Permanently delete “'+existing.name+'”? This cannot be undone.'))return;try{const next=deleteTheme(s,existing.id);CalcData.write('settings',next);for(const k of Object.keys(s))delete s[k];Object.assign(s,next);history.clear();close();onChange()}catch(err){error.textContent=err.message}};
    removePart.onclick=()=>{
     const id=editing.active;if(!specific(id)||!Object.hasOwn(draft.custom,id)||!confirm('Delete the custom styling for '+specific(id).name+'? Its normal theme color will return. This cannot be undone.'))return;
