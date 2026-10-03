@@ -26,6 +26,14 @@ const CalcThemes=(()=>{
  function timeline(read,write){const steps=[];return {get length(){return steps.length},clear(){steps.length=0},push(){const snapshot=JSON.stringify(read());if(steps.at(-1)!==snapshot)steps.push(snapshot)},undo(){if(steps.length)write(JSON.parse(steps.pop()))}}}
  // One definition source for the editor, AI contract, saved themes and backups.
  const builtins=['cream','night','black','white','mint'];
+ const builtinNames={cream:'Cream',night:'Midnight',black:'Black',white:'White',mint:'Mint'};
+ const builtinPalettes={
+  cream:{...defaults},
+  night:{bg:'#0e1020',panel:'#171a33',screen:'#080915',ink:'#e9ecff',dim:'#6b719e',key:'#2a2f5c',keyd:'#14183a',keytx:'#e9ecff',op:'#7c5cff',opd:'#4630b8',optx:'#ffffff',fn:'#3a4080',fnd:'#1d2150',fntx:'#e9ecff',ib:'#2b2c39',ibtx:'#e9ecff'},
+  black:{bg:'#000000',panel:'#191919',screen:'#080808',ink:'#ffffff',dim:'#999999',key:'#333333',keyd:'#171717',keytx:'#ffffff',op:'#ff9500',opd:'#a85e00',optx:'#ffffff',fn:'#555555',fnd:'#2a2a2a',fntx:'#ffffff',ib:'#333333',ibtx:'#ffffff'},
+  white:{bg:'#ffffff',panel:'#f1f1f3',screen:'#ffffff',ink:'#111111',dim:'#8e8e93',key:'#ffffff',keyd:'#d1d1d6',keytx:'#111111',op:'#ff9500',opd:'#c26f00',optx:'#ffffff',fn:'#e5e5ea',fnd:'#c7c7cc',fntx:'#111111',ib:'#f0f0f0',ibtx:'#111111'},
+  mint:{bg:'#d7efe4',panel:'#bfe3d3',screen:'#12342b',ink:'#d9fff0',dim:'#5f9985',key:'#f2fffa',keyd:'#98c9b6',keytx:'#12342b',op:'#17b377',opd:'#0b7a50',optx:'#ffffff',fn:'#a9d8c5',fnd:'#7fb59f',fntx:'#12342b',ib:'#34564d',ibtx:'#d9fff0'}
+ };
  const properties=Object.fromEntries([...fields.map(([id,label])=>[id,{label,type:'color',required:true}]),...specifics.map(x=>[x.id,{label:x.name,type:'color',required:false,inherits:x.base}])]);
  function record(value,label){if(!value||typeof value!=='object'||Array.isArray(value))throw Error(label+' must be a JSON object.');return value}
  function safeTree(value,depth=0){
@@ -52,17 +60,26 @@ const CalcThemes=(()=>{
   let value;try{value=JSON.parse(text)}catch(_){throw Error('That is not valid JSON. Copy only the final Chunky Theme block.')}return themeBlock(value);
  }
  function deleteTheme(s,id){
-  if(builtins.includes(id)||!s.customThemes.some(t=>t.id===id))throw Error('Only saved custom themes can be deleted.');
+  if(builtins.includes(id)){
+   const deleted=[...new Set([...(s.deletedBuiltins||[]),id])],overrides={...(s.builtinOverrides||{})};delete overrides[id];
+   const next={...s,deletedBuiltins:deleted,builtinOverrides:overrides};
+   if(s.skin===id){const fallback=builtins.find(x=>!deleted.includes(x)),custom=s.customThemes[0];if(fallback){next.skin=fallback;delete next.customThemeId;delete next.custom}else if(custom){next.skin='custom';next.customThemeId=custom.id;next.custom={...custom.colors}}else{next.skin='cream';delete next.customThemeId;delete next.custom}}
+   return next;
+  }
+  if(!s.customThemes.some(t=>t.id===id))throw Error('Only saved themes can be deleted.');
   const next={...s,customThemes:s.customThemes.filter(t=>t.id!==id)};
-  if(s.customThemeId===id){next.skin='cream';delete next.customThemeId;delete next.custom}
+  if(s.customThemeId===id){const fallback=builtins.find(x=>!(s.deletedBuiltins||[]).includes(x)),custom=next.customThemes[0];if(fallback){next.skin=fallback;delete next.customThemeId;delete next.custom}else if(custom){next.skin='custom';next.customThemeId=custom.id;next.custom={...custom.colors}}else{next.skin='cream';delete next.customThemeId;delete next.custom}}
   return next;
  }
  function deleteElement(p,id){if(!specific(id)||!Object.hasOwn(p,id))throw Error('This part has no custom override.');const next={...p};delete next[id];return next}
  function restore(s){
   s.customThemes=(Array.isArray(s.customThemes)?s.customThemes:[]).filter(t=>t&&typeof t.id==='string'&&typeof t.name==='string').map(t=>({id:t.id,name:t.name.slice(0,40),colors:palette(t.colors)}));
+  s.deletedBuiltins=[...new Set((Array.isArray(s.deletedBuiltins)?s.deletedBuiltins:[]).filter(id=>builtins.includes(id)))];
+  s.builtinOverrides=Object.fromEntries(Object.entries(s.builtinOverrides&&typeof s.builtinOverrides==='object'?s.builtinOverrides:{}).filter(([id,t])=>builtins.includes(id)&&t&&typeof t.name==='string').map(([id,t])=>[id,{name:t.name.slice(0,40),colors:palette(t.colors)}]));
   if(!s.customThemes.length&&s.custom){const t={id:'legacy-custom',name:'My theme',colors:palette(s.custom)};s.customThemes.push(t);if(s.skin==='custom')s.customThemeId=t.id}
   const active=s.customThemes.find(t=>t.id===s.customThemeId);
   if(s.skin==='custom'&&active)s.custom={...active.colors};
+  if(s.skin!=='custom'&&!builtins.includes(s.skin))s.skin='cream';
   return s;
  }
  function savedSettings(s,id,name,colors){
@@ -72,9 +89,10 @@ const CalcThemes=(()=>{
   return {...s,skin:'custom',customThemeId:t.id,custom:{...t.colors},customThemes:[...s.customThemes.filter(x=>x.id!==t.id),t]};
  }
  function apply(s){
-  const root=document.documentElement;root.dataset.skin=s.skin;
-  const p=palette(s.custom);fields.forEach(([k])=>{if(s.skin==='custom')root.style.setProperty('--'+k,p[k]);else root.style.removeProperty('--'+k)});
-  if(document.getElementById){let style=document.getElementById('specific-theme-colors');if(!style){style=document.createElement('style');style.id='specific-theme-colors';document.head.append(style)}style.textContent=s.skin==='custom'?specifics.filter(x=>p[x.id]).map(x=>':root[data-skin="custom"] '+x.target.selector+':not(.hot){'+x.property+':'+p[x.id]+'}').join('\n'):''}
+  const root=document.documentElement,raw=s.skin==='custom'?s.custom:s.builtinOverrides?.[s.skin]?.colors,p=palette(raw);
+  root.dataset.skin=s.skin;
+  fields.forEach(([k])=>{if(raw)root.style.setProperty('--'+k,p[k]);else root.style.removeProperty('--'+k)});
+  if(document.getElementById){let style=document.getElementById('specific-theme-colors');if(!style){style=document.createElement('style');style.id='specific-theme-colors';document.head.append(style)}style.textContent=raw?specifics.filter(x=>color(raw[x.id])).map(x=>x.target.selector+':not(.hot){'+x.property+':'+p[x.id]+'}').join('\n'):''}
  }
  function snapshot(){const css=getComputedStyle(document.documentElement);return Object.fromEntries(fields.map(([k])=>[k,color(css.getPropertyValue('--'+k))||defaults[k]]))}
  function toHsl(hex){
@@ -132,7 +150,7 @@ const CalcThemes=(()=>{
   const el=element,box=el('section','custom-editor');box.setAttribute('aria-label','Custom theme editor');
   const preview=el('div','mini-preview');box.append(preview,el('p','','Pick a soft palette, adjust a group, or choose one specific part. Save when you’re happy with it.'));
   const presetsRow=el('div','custom-presets');
-  presets.forEach(([name,p])=>{const b=el('button','',name);b.type='button';b.onclick=()=>{finish();beforeChange();s.custom={...p};commit();sync()};presetsRow.append(b)});const ai=el('button','','AI');ai.type='button';ai.onclick=()=>hooks.ai?hooks.ai():document.dispatchEvent(new CustomEvent('chunky-open-ai'));presetsRow.append(ai);box.append(presetsRow);
+  presets.forEach(([name,p])=>{const b=el('button','',name);b.type='button';b.onclick=()=>{finish();beforeChange();s.custom={...p};commit();sync()};presetsRow.append(b)});box.append(presetsRow);
   const controls=el('div','color-controls'),part=el('select');part.setAttribute('aria-label','Calculator element');
   const label=(name,input)=>{const l=el('label','',name);l.append(input);return l};
   const selectRow=el('div','part-select-row'),selectPart=el('button','pill','Select');selectPart.type='button';selectPart.setAttribute('aria-label','Select a specific element');selectRow.append(part,selectPart);controls.append(label('Choose a part',selectRow));
@@ -167,17 +185,37 @@ const CalcThemes=(()=>{
   return {get active(){return active},refresh(){finish();commit();sync()}};
  }
  function manager(host,s,onChange,services={}){
-  const el=(tag,text)=>{const e=document.createElement(tag);if(text)e.textContent=text;return e};
-  const wrap=el('div');wrap.className='theme-manager';const label=el('label','Custom themes'),select=el('select');select.setAttribute('aria-label','Custom themes');
-  const option=(value,name)=>{const o=el('option',name);o.value=value;select.append(o)};
-  option('','Choose a saved theme…');s.customThemes.forEach(t=>option(t.id,t.name));option('__new','＋ Create new theme');select.value=s.skin==='custom'?s.customThemeId||'':'';
-  label.append(select);wrap.append(label);
-  const active=s.customThemes.find(t=>t.id===s.customThemeId);
-  if(s.skin==='custom'&&active){const edit=el('button','Edit theme');edit.className='chip';edit.onclick=()=>open(active);wrap.append(edit)}
-  select.onchange=()=>{if(select.value==='__new'){open();select.value=s.skin==='custom'?s.customThemeId||'':'';return}const t=s.customThemes.find(x=>x.id===select.value);if(t){s.skin='custom';s.customThemeId=t.id;s.custom={...t.colors};onChange()}};
-  host.append(wrap);
+  const el=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e};
+  const wrap=el('div');wrap.className='theme-manager';const grid=el('div');grid.className='sws theme-library';
+  const activeId=s.skin==='custom'?s.customThemeId:s.skin;
+  const themes=[
+   ...builtins.filter(id=>!(s.deletedBuiltins||[]).includes(id)).map(id=>({id,name:s.builtinOverrides?.[id]?.name||builtinNames[id],colors:s.builtinOverrides?.[id]?.colors||builtinPalettes[id],builtin:true})),
+   ...s.customThemes.map(t=>({...t,builtin:false}))
+  ];
+  const colorGrid=colors=>{
+   const counts={};Object.values(palette(colors)).forEach(v=>{if(color(v))counts[v]=(counts[v]||0)+1});
+   const list=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([v])=>v);while(list.length<4)list.push(list.at(-1)||'#888888');
+   return 'conic-gradient('+list.map((v,i)=>v+' '+i*25+'% '+(i+1)*25+'%').join(',')+')';
+  };
+  const selectTheme=t=>{if(t.builtin){s.skin=t.id;delete s.customThemeId;delete s.custom}else{s.skin='custom';s.customThemeId=t.id;s.custom={...t.colors}}onChange()};
+  themes.forEach(t=>{
+   const item=el('div');item.className='theme-option';const shell=el('div');shell.className='theme-tile-shell';
+   const swatch=el('button');swatch.type='button';swatch.className='sw theme-square'+(activeId===t.id?' on':'');swatch.style.background=colorGrid(t.colors);swatch.setAttribute('aria-label','Use '+t.name);swatch.setAttribute('aria-pressed',String(activeId===t.id));swatch.onclick=()=>selectTheme(t);
+   const edit=el('button','✎');edit.type='button';edit.className='theme-edit';edit.setAttribute('aria-label','Edit '+t.name);edit.onclick=e=>{e.stopPropagation();open(t)};
+   shell.append(swatch,edit);item.append(shell,el('span',t.name));grid.append(item);
+  });
+  const addItem=el('div');addItem.className='theme-option';const add=el('button','+');add.type='button';add.className='sw theme-square theme-add';add.setAttribute('aria-label','Create a theme');add.onclick=chooseCreation;addItem.append(add,el('span','New'));grid.append(addItem);wrap.append(grid);host.append(wrap);
+
+  function chooseCreation(){
+   const focused=document.activeElement,modal=el('div');modal.className='sheet on theme-popup theme-choice-popup';modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-label','Create a theme');
+   const panel=el('div');panel.className='panel';const header=el('div');header.className='ph';const closeButton=el('button','Close');closeButton.type='button';closeButton.className='pill';header.append(el('b','Create a theme'),closeButton);
+   const body=el('div');body.className='theme-choice-body';body.append(el('p','How would you like to make it?'));
+   const actions=el('div');actions.className='theme-choice-actions';const manual=el('button','Manual'),ai=el('button','Ask AI');for(const b of [manual,ai]){b.type='button';b.className='pill'}actions.append(manual,ai);body.append(actions);panel.append(header,body);modal.append(panel);document.body.append(modal);
+   const close=()=>{modal.remove();if(focused?.isConnected)focused.focus()};closeButton.onclick=close;manual.onclick=()=>{close();open()};ai.onclick=()=>{close();services.ai?.()};modal.onclick=e=>{if(e.target===modal)close()};closeButton.focus();
+  }
+
   function open(existing){
-   const focused=document.activeElement,draft={custom:palette(existing?existing.colors:s.skin==='custom'?s.custom:snapshot())};
+   const focused=document.activeElement,base=existing?existing.colors:builtinPalettes.cream,draft={custom:palette(base)};
    const modal=el('div');modal.className='sheet on theme-popup';modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-label',existing?'Edit theme':'Create theme');
    const panel=el('form');panel.className='panel';const header=el('div');header.className='ph';
    const cancel=el('button','Cancel'),undo=el('button'),save=el('button','Save');cancel.type=undo.type='button';save.type='submit';cancel.className=undo.className=save.className='pill';undo.classList.add('undo-button');undo.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 10l6 6M3 10h11a7 7 0 0 1 0 14" transform="translate(0 -2)"/></svg>';undo.setAttribute('aria-label','Undo last edit');undo.title='Undo last edit';undo.disabled=true;header.append(cancel,el('b',existing?'Edit theme':'Create theme'),undo,save);
@@ -189,19 +227,31 @@ const CalcThemes=(()=>{
    const error=el('p');error.className='theme-error';error.setAttribute('role','alert');body.append(error);
    const footer=el('div');footer.className='theme-delete-row';const removeTheme=el('button','Delete Theme'),removePart=el('button','Delete Element');
    for(const b of [removeTheme,removePart]){b.type='button';b.className='delete-outline'}
-   removeTheme.hidden=!existing||builtins.includes(existing.id);removePart.hidden=true;footer.append(removeTheme,removePart);
-   editing=editor(body,draft,()=>{},checkpoint,{ai:()=>services.ai?.(()=>close()),selection:(id,custom)=>{removePart.hidden=!custom}});body.querySelector('.custom-editor').append(footer);panel.append(header,body);modal.append(panel);document.body.append(modal);
+   removeTheme.hidden=!existing;removePart.hidden=true;footer.append(removeTheme,removePart);
+   editing=editor(body,draft,()=>{},checkpoint,{selection:(id,custom)=>{removePart.hidden=!custom}});body.querySelector('.custom-editor').append(footer);panel.append(header,body);modal.append(panel);document.body.append(modal);
    removeTheme.onclick=()=>{if(!existing||!confirm('Permanently delete “'+existing.name+'”? This cannot be undone.'))return;try{const next=deleteTheme(s,existing.id);CalcData.write('settings',next);for(const k of Object.keys(s))delete s[k];Object.assign(s,next);history.clear();close();onChange()}catch(err){error.textContent=err.message}};
-   removePart.onclick=()=>{const id=editing.active;if(!specific(id)||!Object.hasOwn(draft.custom,id)||!confirm('Delete the custom styling for '+specific(id).name+'? Its normal theme color will return. This cannot be undone.'))return;
-    try{const colors=deleteElement(draft.custom,id);if(existing){const next={...s,customThemes:s.customThemes.map(t=>t.id===existing.id?{...t,colors:Object.hasOwn(t.colors,id)?deleteElement(t.colors,id):t.colors}:t)};if(s.customThemeId===existing.id&&s.custom&&Object.hasOwn(s.custom,id))next.custom=deleteElement(s.custom,id);CalcData.write('settings',next);Object.assign(s,next);onChange()}
+   removePart.onclick=()=>{
+    const id=editing.active;if(!specific(id)||!Object.hasOwn(draft.custom,id)||!confirm('Delete the custom styling for '+specific(id).name+'? Its normal theme color will return. This cannot be undone.'))return;
+    try{
+     const colors=deleteElement(draft.custom,id);
+     if(existing){
+      let next={...s};
+      if(existing.builtin){const current=s.builtinOverrides?.[existing.id]||{name:existing.name,colors:existing.colors};next.builtinOverrides={...(s.builtinOverrides||{}),[existing.id]:{...current,colors:Object.hasOwn(current.colors,id)?deleteElement(current.colors,id):current.colors}}}
+      else{next.customThemes=s.customThemes.map(t=>t.id===existing.id?{...t,colors:Object.hasOwn(t.colors,id)?deleteElement(t.colors,id):t.colors}:t);if(s.customThemeId===existing.id&&s.custom&&Object.hasOwn(s.custom,id))next.custom=deleteElement(s.custom,id)}
+      CalcData.write('settings',next);Object.assign(s,next);onChange();
+     }
      draft.custom=colors;history.clear();undo.disabled=true;editing.refresh();error.textContent='Custom element styling deleted.';
     }catch(err){error.textContent=err.message}
    };
    const close=()=>{modal.remove();if(focused&&focused.isConnected)focused.focus()};cancel.onclick=close;
-   panel.onsubmit=e=>{e.preventDefault();try{const next=savedSettings(s,existing&&existing.id,name.value,draft.custom);CalcData.write('settings',next);Object.assign(s,next);close();onChange()}catch(err){error.textContent=err.message||'Could not save this theme on your device.';name.focus()}};
+   panel.onsubmit=e=>{e.preventDefault();try{
+    const clean=name.value.trim();if(!clean)throw Error('Give your theme a name.');const used=[...builtins.map(id=>s.builtinOverrides?.[id]?.name||builtinNames[id]),...s.customThemes.map(t=>t.name)].some(n=>n.toLowerCase()===clean.toLowerCase()&&n.toLowerCase()!==existing?.name.toLowerCase());if(used)throw Error('That name is already used. Choose another name.');
+    let next;if(existing?.builtin){next={...s,skin:existing.id,builtinOverrides:{...(s.builtinOverrides||{}),[existing.id]:{name:clean.slice(0,40),colors:palette(draft.custom)}},deletedBuiltins:(s.deletedBuiltins||[]).filter(id=>id!==existing.id)};delete next.customThemeId;delete next.custom}else next=savedSettings(s,existing&&existing.id,clean,draft.custom);
+    CalcData.write('settings',next);Object.assign(s,next);close();onChange()
+   }catch(err){error.textContent=err.message||'Could not save this theme on your device.';name.focus()}};
    modal.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape'){e.preventDefault();close()}if(e.key==='Tab'){const items=[...panel.querySelectorAll('button,input,select')].filter(x=>!x.disabled&&!x.hidden),first=items[0],last=items.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
    cancel.focus();
   }
  }
- return {builtins,properties,record,safeTree,only,validatePalette,themeBlock,parseTheme,deleteTheme,deleteElement,sample,fields,specifics,palette,valueFor,nearest,timeline,apply,snapshot,color,toHsl,fromHsl,presets,editor,restore,savedSettings,manager};
+ return {builtins,builtinNames,builtinPalettes,properties,record,safeTree,only,validatePalette,themeBlock,parseTheme,deleteTheme,deleteElement,sample,fields,specifics,palette,valueFor,nearest,timeline,apply,snapshot,color,toHsl,fromHsl,presets,editor,restore,savedSettings,manager};
 })();
